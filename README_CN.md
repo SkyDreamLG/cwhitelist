@@ -16,15 +16,15 @@
 
 您可以使用此代码将用户添加到白名单中
 
-/cwhitelist add <type> <volum>
+/cwhitelist add type volum
 
-<type>可以是name/uuid/ip，而<volum>是用户的信息
+type可以是name/uuid/ip，而volum是用户的信息
 
 您可以使用此代码将用户移除白名单
 
-/cwhitelist remove <type> <volum>
+/cwhitelist remove type volum
 
-<type>可以是name/uuid/ip，而<volum>是用户的信息
+type可以是name/uuid/ip，而volum是用户的信息
 
 您可以使用此代码列出白名单
 
