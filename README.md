@@ -1,3 +1,7 @@
+This mod can fix the official whitelist system that fails in Minecraft offline servers.
+
+This mod establishes an independent whitelist system that can determine whether a user is allowed to access the server based on any of their IP/username/UUID.
+
 Before you use this mod, please make sure that the server's whitelist has been disabled.
 
 You can find this in server.properties, and turn white-list into false.
