@@ -1,0 +1,5 @@
+{
+  "itemGroup.cwhitelist": "Example Mod Tab",
+  "block.cwhitelist.example_block": "Example Block",
+  "item.cwhitelist.example_item": "Example Item"
+}
