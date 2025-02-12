@@ -4,6 +4,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
 import net.minecraft.server.level.ServerPlayer;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -29,7 +30,9 @@ public class WhitelistManager {
     public static boolean isAllowed(ServerPlayer player) {
         String name = player.getGameProfile().getName();
         UUID uuid = player.getGameProfile().getId();
-        String ip = player.connection.getConnection().getRemoteAddress().toString().split(":")[0];
+
+        // 提取 IP 地址
+        String ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
 
         // 检查玩家是否在白名单中
         boolean allowed = entries.stream().anyMatch(entry -> {
@@ -44,10 +47,23 @@ public class WhitelistManager {
         // 返回结果
         return allowed;
     }
-
     private static boolean matchIP(String pattern, String ip) {
-        String regex = pattern.replace(".", "\\.").replace("*", ".*");
-        return Pattern.matches(regex, ip);
+        try {
+            // 将模式转换为正则表达式
+            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+
+            // 特殊处理 IPv6 地址的双冒号（::）
+            if (ip.contains(":")) {
+                regex = regex.replaceAll("::", "(::|:([0-9a-fA-F]{0,4}:){0,7})");
+            }
+
+            // 创建正则表达式对象并匹配
+            return Pattern.matches(regex, ip);
+        } catch (Exception e) {
+            // 捕获异常以防正则表达式出错
+            Cwhitelist.LOGGER.error("Invalid regex pattern: " + pattern, e);
+            return false;
+        }
     }
 
     public static void save() {

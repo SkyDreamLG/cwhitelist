@@ -94,7 +94,7 @@ public class WhitelistCommand {
     }
 
     private static int listEntries(CommandSourceStack source) {
-        StringBuilder sb = new StringBuilder("Whitelist Entries:\n");
+        StringBuilder sb = new StringBuilder("白名单列表:\n");
         WhitelistManager.getEntries().forEach(e -> sb.append(e.getType()).append(": ").append(e.getValue()).append("\n"));
         source.sendSuccess(() -> Component.literal(sb.toString()), false);
         return 1;

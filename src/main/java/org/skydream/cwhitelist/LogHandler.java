@@ -2,6 +2,7 @@ package org.skydream.cwhitelist;
 
 import net.minecraft.server.level.ServerPlayer;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -23,7 +24,10 @@ public class LogHandler {
         String time = LocalDateTime.now().format(TIME_FORMAT);
         String name = player.getGameProfile().getName();
         String uuid = player.getGameProfile().getId().toString();
-        String ip = player.connection.getConnection().getRemoteAddress().toString().split(":")[0];
+
+        // 提取 IP 地址
+        String ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
+
         String result = allowed ? "ALLOW" : "DENY";
 
         String logLine = String.format("[%s] [%s] %s %s %s\n", time, result, name, uuid, ip);
