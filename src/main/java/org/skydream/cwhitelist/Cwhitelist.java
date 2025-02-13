@@ -14,6 +14,8 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 
+import static org.skydream.cwhitelist.LogHandler.cleanOldLogs;
+
 @Mod(Cwhitelist.MODID)
 public class Cwhitelist {
     public static final String MODID = "cwhitelist";
@@ -32,6 +34,8 @@ public class Cwhitelist {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
+        // 定期清理过期日志
+        cleanOldLogs();
         // 加载白名单
         WhitelistManager.load();
         LOGGER.info("CWhitelist mod initialized and whitelist loaded!");
@@ -50,7 +54,7 @@ public class Cwhitelist {
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (!WhitelistManager.isAllowed(player)) {
-                player.connection.disconnect(net.minecraft.network.chat.Component.literal("你不在服务器白名单内!"));
+                player.connection.disconnect(net.minecraft.network.chat.Component.literal(WhitelistCommand.getLocaleString("commands.cwhitelist.banned")));
             }
         }
     }

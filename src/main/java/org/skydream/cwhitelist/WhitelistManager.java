@@ -9,11 +9,16 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import static org.skydream.cwhitelist.Config.*;
+import static org.skydream.cwhitelist.LogHandler.cleanOldLogs;
+
 public class WhitelistManager {
     private static final Path WHITELIST_PATH = Paths.get("config/cwhitelist_entries.json");
     private static final List<WhitelistEntry> entries = new ArrayList<>();
 
     public static void load() {
+        // 定期清理过期日志
+        cleanOldLogs();
         try {
             if (!Files.exists(WHITELIST_PATH)) {
                 Files.createFile(WHITELIST_PATH);
@@ -36,9 +41,12 @@ public class WhitelistManager {
 
         // 检查玩家是否在白名单中
         boolean allowed = entries.stream().anyMatch(entry -> {
-            if (Config.ENABLE_NAME_CHECK && entry.type.equals("name") && entry.value.equalsIgnoreCase(name)) return true;
-            if (Config.ENABLE_UUID_CHECK && entry.type.equals("uuid") && entry.value.equalsIgnoreCase(uuid.toString())) return true;
-            return Config.ENABLE_IP_CHECK && entry.type.equals("ip") && matchIP(entry.value, ip);
+            boolean ENABLE_NAME_CHECK = Config.ENABLE_NAME_CHECK.get();
+            boolean ENABLE_UUID_CHECK = Config.ENABLE_LOGGING.get();
+            boolean ENABLE_IP_CHECK = Config.ENABLE_LOGGING.get();
+            if (ENABLE_NAME_CHECK && entry.type.equals("name") && entry.value.equalsIgnoreCase(name)) return true;
+            if (ENABLE_UUID_CHECK && entry.type.equals("uuid") && entry.value.equalsIgnoreCase(uuid.toString())) return true;
+            return ENABLE_IP_CHECK && entry.type.equals("ip") && matchIP(entry.value, ip);
         });
 
         // 记录日志

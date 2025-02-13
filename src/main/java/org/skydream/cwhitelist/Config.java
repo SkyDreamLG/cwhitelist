@@ -1,33 +1,37 @@
 package org.skydream.cwhitelist;
 
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class Config {
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
     public static final ModConfigSpec SPEC;
-
-    // 日志配置
     public static final ModConfigSpec.BooleanValue ENABLE_LOGGING;
     public static final ModConfigSpec.IntValue LOG_RETENTION_DAYS;
     public static final ModConfigSpec.IntValue LOG_CUT_SIZE_MB;
-    public static final boolean ENABLE_NAME_CHECK = true;
-    public static final boolean ENABLE_UUID_CHECK = true;
-    public static boolean ENABLE_IP_CHECK = true;
+    public static final ModConfigSpec.BooleanValue ENABLE_NAME_CHECK;
+    public static final ModConfigSpec.BooleanValue ENABLE_UUID_CHECK;
+    public static final ModConfigSpec.BooleanValue ENABLE_IP_CHECK;
 
     static {
-        ENABLE_LOGGING = BUILDER
-                .comment("Enable logging for whitelist events")
-                .define("enableLogging", true);
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
 
-        LOG_RETENTION_DAYS = BUILDER
-                .comment("Number of days to retain logs")
-                .defineInRange("logRetentionDays", 7, 1, 365);
+        ENABLE_LOGGING = builder
+                .comment("Enable logging").define("enableLogging", true);
 
-        LOG_CUT_SIZE_MB = BUILDER
-                .comment("Maximum size of a single log file (in MB)")
-                .defineInRange("logCutSizeMB", 10, 1, 100);
+        ENABLE_NAME_CHECK = builder
+                .comment("Enable name check").define("enableNameCheck", true);
 
-        SPEC = BUILDER.build();
+        ENABLE_UUID_CHECK = builder
+                .comment("Enable UUID check").define("enableUuidCheck", true);
+
+        ENABLE_IP_CHECK = builder
+                .comment("Enable IP check").define("enableIpCheck", true);
+
+        LOG_RETENTION_DAYS = builder
+                .comment("Log retention days").defineInRange("logRetentionDays", 7, 1, 365);
+
+        LOG_CUT_SIZE_MB = builder
+                .comment("Max log size (MB)").defineInRange("logCutSizeMB", 10, 1, 100);
+
+        SPEC = builder.build();
     }
 }

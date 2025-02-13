@@ -1,5 +1,15 @@
 {
-  "itemGroup.cwhitelist": "Example Mod Tab",
-  "block.cwhitelist.example_block": "Example Block",
-  "item.cwhitelist.example_item": "Example Item"
+  "commands.cwhitelist.add.success": "Entry added: %s=%s",
+  "commands.cwhitelist.add.failure.exists": "Entry already exists: ",
+  "commands.cwhitelist.add.failure.invalid": "Invalid input! Please enter name/uuid/ip",
+  "commands.cwhitelist.add.failure.error": "Failed to add entry: ",
+
+  "commands.cwhitelist.remove.success": "Entry removed: ",
+  "commands.cwhitelist.remove.failure": "Entry does not exist!",
+
+  "commands.cwhitelist.list.title": "Whitelist entries:\n",
+
+  "commands.cwhitelist.reload.success": "Whitelist configuration reloaded!",
+
+  "commands.cwhitelist.banned": "You are not in the whitelist!"
 }

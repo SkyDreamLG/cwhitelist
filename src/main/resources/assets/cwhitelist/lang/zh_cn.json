@@ -1,0 +1,15 @@
+{
+  "commands.cwhitelist.add.success": "条目已添加: ",
+  "commands.cwhitelist.add.failure.exists": "条目已存在: ",
+  "commands.cwhitelist.add.failure.invalid": "输入有误! 请输入 name/uuid/ip",
+  "commands.cwhitelist.add.failure.error": "条目添加失败: %s",
+
+  "commands.cwhitelist.remove.success": "条目已移除: ",
+  "commands.cwhitelist.remove.failure": "条目不存在!",
+
+  "commands.cwhitelist.list.title": "白名单列表:\n",
+
+  "commands.cwhitelist.reload.success": "白名单配置已重载!",
+
+  "commands.cwhitelist.banned": "你不在服务器白名单内!"
+}
