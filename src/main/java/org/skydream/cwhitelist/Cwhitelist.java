@@ -2,6 +2,7 @@ package org.skydream.cwhitelist;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -37,7 +38,7 @@ public class Cwhitelist {
         // 定期清理过期日志
         cleanOldLogs();
         // 加载白名单
-        WhitelistManager.load();
+        WhitelistManager.loadAsync();
         LOGGER.info("CWhitelist mod initialized and whitelist loaded!");
     }
 
@@ -50,7 +51,7 @@ public class Cwhitelist {
         LOGGER.info("CWhitelist mod is ready on server!");
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (!WhitelistManager.isAllowed(player)) {

@@ -7,6 +7,7 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 import static org.skydream.cwhitelist.Config.*;
@@ -16,8 +17,10 @@ public class WhitelistManager {
     private static final Path WHITELIST_PATH = Paths.get("config/cwhitelist_entries.json");
     private static final List<WhitelistEntry> entries = new ArrayList<>();
 
+    private static boolean isLoaded = false;
+
     public static void load() {
-        // 定期清理过期日志
+        if (isLoaded) return; // 如果已经加载过，则跳过
         cleanOldLogs();
         try {
             if (!Files.exists(WHITELIST_PATH)) {
@@ -27,48 +30,60 @@ public class WhitelistManager {
             String json = Files.readString(WHITELIST_PATH);
             entries.clear();
             entries.addAll(new Gson().fromJson(json, new TypeToken<List<WhitelistEntry>>(){}.getType()));
+            isLoaded = true; // 标记为已加载
         } catch (IOException e) {
             Cwhitelist.LOGGER.error("Failed to load whitelist", e);
         }
     }
 
+    public static void loadAsync() {
+        CompletableFuture.runAsync(WhitelistManager::load);
+    }
+
     public static boolean isAllowed(ServerPlayer player) {
         String name = player.getGameProfile().getName();
         UUID uuid = player.getGameProfile().getId();
-
-        // 提取 IP 地址
         String ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
 
-        // 检查玩家是否在白名单中
-        boolean allowed = entries.stream().anyMatch(entry -> {
-            boolean ENABLE_NAME_CHECK = Config.ENABLE_NAME_CHECK.get();
-            boolean ENABLE_UUID_CHECK = Config.ENABLE_LOGGING.get();
-            boolean ENABLE_IP_CHECK = Config.ENABLE_LOGGING.get();
-            if (ENABLE_NAME_CHECK && entry.type.equals("name") && entry.value.equalsIgnoreCase(name)) return true;
-            if (ENABLE_UUID_CHECK && entry.type.equals("uuid") && entry.value.equalsIgnoreCase(uuid.toString())) return true;
-            return ENABLE_IP_CHECK && entry.type.equals("ip") && matchIP(entry.value, ip);
-        });
+        boolean ENABLE_NAME_CHECK = Config.ENABLE_NAME_CHECK.get();
+        boolean ENABLE_UUID_CHECK = Config.ENABLE_UUID_CHECK.get();
+        boolean ENABLE_IP_CHECK = Config.ENABLE_IP_CHECK.get();
 
-        // 记录日志
-        LogHandler.log(player, allowed);
+        for (WhitelistEntry entry : entries) {
+            if (ENABLE_NAME_CHECK && entry.type.equals("name") && entry.value.equalsIgnoreCase(name)) {
+                LogHandler.log(player, true);
+                return true;
+            }
+            if (ENABLE_UUID_CHECK && entry.type.equals("uuid") && entry.value.equalsIgnoreCase(uuid.toString())) {
+                LogHandler.log(player, true);
+                return true;
+            }
+            if (ENABLE_IP_CHECK && entry.type.equals("ip") && matchIP(entry.value, ip)) {
+                LogHandler.log(player, true);
+                return true;
+            }
+        }
 
-        // 返回结果
-        return allowed;
+        LogHandler.log(player, false);
+        return false;
     }
+
+    private static final Map<String, Pattern> regexCache = new HashMap<>();
+
     private static boolean matchIP(String pattern, String ip) {
         try {
-            // 将模式转换为正则表达式
-            String regex = pattern.replace(".", "\\.").replace("*", ".*");
+            // 检查缓存中是否已有编译好的正则表达式
+            Pattern compiledPattern = regexCache.computeIfAbsent(pattern, p -> {
+                String regex = p.replace(".", "\\.").replace("*", ".*");
+                if (ip.contains(":")) {
+                    regex = regex.replaceAll("::", "(::|:([0-9a-fA-F]{0,4}:){0,7})");
+                }
+                return Pattern.compile(regex);
+            });
 
-            // 特殊处理 IPv6 地址的双冒号（::）
-            if (ip.contains(":")) {
-                regex = regex.replaceAll("::", "(::|:([0-9a-fA-F]{0,4}:){0,7})");
-            }
-
-            // 创建正则表达式对象并匹配
-            return Pattern.matches(regex, ip);
+            // 使用预编译的正则表达式进行匹配
+            return compiledPattern.matcher(ip).matches();
         } catch (Exception e) {
-            // 捕获异常以防正则表达式出错
             Cwhitelist.LOGGER.error("Invalid regex pattern: " + pattern, e);
             return false;
         }
@@ -98,7 +113,8 @@ public class WhitelistManager {
     }
 
     public static void reload() {
-        load();
+        isLoaded = false; // 标记为已加载
+        loadAsync();
     }
 
     public static boolean containsEntry(WhitelistEntry entry) {
