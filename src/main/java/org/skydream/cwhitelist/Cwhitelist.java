@@ -51,7 +51,7 @@ public class Cwhitelist {
         LOGGER.info("CWhitelist mod is ready on server!");
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGH)
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (!WhitelistManager.isAllowed(player)) {
