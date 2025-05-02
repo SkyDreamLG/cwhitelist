@@ -37,3 +37,7 @@ type可以是name/uuid/ip，而volum是用户的信息
 您可以使用此代码重新加载白名单
 
 /cwhitelist reload
+
+cwhitelist白名单图形化编辑和日志简单分析工具可以访问https://github.com/SkyDreamLG/cwhitelist_configuration_GUI获取
+
+请注意，修改白名单数据后，请务必在服务器执行/cwhitelist reload来重载白名单数据
