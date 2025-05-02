@@ -39,4 +39,5 @@ You can use this code to reload the whitelist
 /cwhitelist reload
 
 GUI configuration tool please visit https://github.com/SkyDreamLG/cwhitelist_configuration_GUI
+
 tips: if you change the whitelist list, you must run /cwhitelist reload in your server to reload the whitelist.
