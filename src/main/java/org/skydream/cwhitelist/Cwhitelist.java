@@ -96,11 +96,12 @@ public class Cwhitelist {
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             if (!WhitelistManager.isAllowed(player)) {
-                player.connection.disconnect(
-                        net.minecraft.network.chat.Component.literal(
-                                WhitelistCommand.getLocaleString("commands.cwhitelist.banned")
-                        )
-                );
+                // 使用客户端语言环境获取翻译
+                net.minecraft.network.chat.Component kickMessage = net.minecraft.network.chat.Component.translatable(
+                        "cwhitelist.player.kick.not_whitelisted"
+                ).withStyle(net.minecraft.ChatFormatting.RED);
+
+                player.connection.disconnect(kickMessage);
             }
         }
     }

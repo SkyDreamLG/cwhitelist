@@ -10,6 +10,7 @@ import java.net.*;
 import java.net.http.*;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +42,13 @@ public class ApiClient {
     private static final Queue<Runnable> requestQueue = new ArrayDeque<>();
     private static boolean isProcessingQueue = false;
 
+    // 强制刷新标记
+    private static final boolean forceRefresh = false;
+
+    public static boolean isForceRefresh() {
+        return forceRefresh;
+    }
+
     static class CacheEntry {
         final Object data;
         final Instant expiryTime;
@@ -66,6 +74,7 @@ public class ApiClient {
         public final boolean isActive;
 
         public TokenInfo(JsonObject json) {
+            Instant expiresAt1;
             this.id = json.get("id").getAsString();
             this.name = json.get("name").getAsString();
             this.isActive = json.get("is_active").getAsBoolean();
@@ -78,9 +87,48 @@ public class ApiClient {
 
             JsonElement expiresElement = json.get("expires_at");
             if (expiresElement != null && !expiresElement.isJsonNull()) {
-                this.expiresAt = Instant.parse(expiresElement.getAsString());
+                String expiresStr = expiresElement.getAsString();
+                try {
+                    // 修复日期时间解析问题
+                    expiresAt1 = parseDateTime(expiresStr);
+                } catch (Exception e) {
+                    LOGGER.warn("Failed to parse expires_at: {}, using max value", expiresStr);
+                    expiresAt1 = Instant.MAX;
+                }
             } else {
-                this.expiresAt = Instant.MAX;
+                expiresAt1 = Instant.MAX;
+            }
+            this.expiresAt = expiresAt1;
+        }
+
+        /**
+         * 安全地解析日期时间字符串
+         */
+        private static Instant parseDateTime(String dateTimeStr) {
+            try {
+                // 先尝试标准ISO格式
+                return Instant.parse(dateTimeStr);
+            } catch (DateTimeParseException e1) {
+                try {
+                    // 如果失败，尝试添加时区信息
+                    if (!dateTimeStr.endsWith("Z") && !dateTimeStr.contains("+")) {
+                        // 添加UTC时区
+                        dateTimeStr += "Z";
+                    }
+                    return Instant.parse(dateTimeStr);
+                } catch (DateTimeParseException e2) {
+                    // 如果还是失败，使用本地解析
+                    try {
+                        // 移除微秒部分
+                        if (dateTimeStr.contains(".")) {
+                            dateTimeStr = dateTimeStr.split("\\.")[0] + "Z";
+                        }
+                        return Instant.parse(dateTimeStr);
+                    } catch (DateTimeParseException e3) {
+                        LOGGER.error("Failed to parse date time: {}", dateTimeStr);
+                        throw e3;
+                    }
+                }
             }
         }
 
@@ -89,7 +137,7 @@ public class ApiClient {
         }
 
         public boolean isValidForWriting() {
-            return isActive && canWrite && !isExpired();
+            return !isActive || !canWrite || isExpired();
         }
 
         public boolean isValidForDeleting() {
@@ -103,14 +151,17 @@ public class ApiClient {
         @Override
         public String toString() {
             return String.format("TokenInfo{id='%s', name='%s', read=%s, write=%s, delete=%s, expires=%s}",
-                    id, name, canRead, canWrite, canDelete, expiresAt);
+                    id, name, canRead, canWrite, canDelete,
+                    expiresAt.equals(Instant.MAX) ? "Never" : expiresAt.toString());
         }
     }
 
     public static void initialize() {
         boolean enableApi = Config.ENABLE_API.get();
+        LOGGER.info("Initializing API client. API enabled: {}", enableApi);
+
         if (!enableApi) {
-            LOGGER.info("API integration is disabled");
+            LOGGER.info("API integration is disabled in config");
             return;
         }
 
@@ -123,8 +174,17 @@ public class ApiClient {
         sendServerId = Config.API_SEND_SERVER_ID.get();
         includeExpired = Config.API_INCLUDE_EXPIRED.get();
 
+        LOGGER.info("API Configuration:");
+        LOGGER.info("  Base URL: {}", baseUrl);
+        LOGGER.info("  Use Header Auth: {}", useHeaderAuth);
+        LOGGER.info("  Timeout: {} seconds", timeoutSeconds);
+        LOGGER.info("  Cache Duration: {} seconds", cacheDurationSeconds);
+        LOGGER.info("  Token configured: {}",
+                apiToken != null && !apiToken.trim().isEmpty() ? "YES" : "NO");
+
         if (apiToken == null || apiToken.trim().isEmpty()) {
-            LOGGER.warn("API token is not set. API integration will be disabled.");
+            LOGGER.error("API token is not set. Please configure token in cwhitelist-common.toml");
+            LOGGER.error("Example: token = \"your-actual-token-here\"");
             return;
         }
 
@@ -134,16 +194,32 @@ public class ApiClient {
                 .version(HttpClient.Version.HTTP_2)
                 .build();
 
-        LOGGER.info("API client initialized with base URL: {}", baseUrl);
-        LOGGER.info("Using {} authentication", useHeaderAuth ? "header" : "query parameter");
+        LOGGER.info("API client initialized successfully");
 
-        // 验证Token
-        verifyToken().thenAccept(verified -> {
-            if (verified) {
-                LOGGER.info("Token verification successful: {}", tokenInfo);
+        // 首先测试健康检查（不需要Token）
+        LOGGER.info("Testing API health check...");
+        healthCheck().thenAccept(healthy -> {
+            if (healthy) {
+                LOGGER.info("✅ API health check PASSED");
+
+                // 如果健康检查通过，验证Token
+                LOGGER.info("Verifying API token...");
+                verifyToken().thenAccept(tokenVerified -> {
+                    if (tokenVerified) {
+                        LOGGER.info("✅ Token verification SUCCESSFUL");
+                        LOGGER.info("Token info: {}", tokenInfo);
+                    } else {
+                        LOGGER.error("❌ Token verification FAILED");
+                        LOGGER.error("Please check if token is valid and has required permissions");
+                    }
+                });
             } else {
-                LOGGER.error("Token verification failed. API functions may not work.");
+                LOGGER.error("❌ API health check FAILED");
+                LOGGER.error("Please check if API server is running at: {}", baseUrl);
             }
+        }).exceptionally(e -> {
+            LOGGER.error("❌ API health check ERROR: {}", e.getMessage());
+            return null;
         });
     }
 
@@ -152,7 +228,7 @@ public class ApiClient {
     }
 
     public static boolean hasValidToken() {
-        return isTokenVerified.get() && tokenInfo != null;
+        return !isTokenVerified.get() || tokenInfo == null;
     }
 
     public static CompletableFuture<Boolean> verifyToken() {
@@ -204,18 +280,25 @@ public class ApiClient {
     }
 
     public static CompletableFuture<List<?>> syncWhitelist() {
+        return syncWhitelist(false);
+    }
+
+    /**
+     * 同步白名单，可指定是否强制刷新
+     */
+    public static CompletableFuture<List<?>> syncWhitelist(boolean force) {
         if (!isEnabled()) {
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
 
         // 检查Token权限
-        if (!hasValidToken() || !tokenInfo.isValidForReading()) {
+        if (hasValidToken() || !tokenInfo.isValidForReading()) {
             LOGGER.error("Token does not have read permission or is invalid");
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
 
-        // 检查缓存
-        if (cacheDurationSeconds > 0) {
+        // 检查缓存，除非强制刷新
+        if (cacheDurationSeconds > 0 && !force) {
             CacheEntry cached = whitelistCache.get("whitelist");
             if (cached != null && !cached.isExpired()) {
                 LOGGER.debug("Returning cached whitelist");
@@ -226,6 +309,12 @@ public class ApiClient {
         // 构建查询参数
         StringBuilder urlBuilder = new StringBuilder("/whitelist/sync");
         urlBuilder.append("?only_active=true");
+
+        // 添加强制刷新参数
+        if (force) {
+            urlBuilder.append("&force_refresh=true");
+            LOGGER.debug("Forcing refresh from API (bypassing cache)");
+        }
 
         if (sendServerId && !serverId.isEmpty()) {
             urlBuilder.append("&server_id=").append(URLEncoder.encode(serverId, java.nio.charset.StandardCharsets.UTF_8));
@@ -251,6 +340,8 @@ public class ApiClient {
                                 // 验证类型
                                 if (Arrays.asList("name", "uuid", "ip").contains(type)) {
                                     entries.add(new WhitelistManager.WhitelistEntry(type, value));
+                                } else {
+                                    LOGGER.warn("Ignoring entry with invalid type: {}", type);
                                 }
                             }
 
@@ -258,6 +349,9 @@ public class ApiClient {
                             if (cacheDurationSeconds > 0) {
                                 whitelistCache.put("whitelist", new CacheEntry(entries, cacheDurationSeconds));
                                 lastSyncTime = Instant.now();
+                                LOGGER.debug("Updated cache with {} entries, expires at {}",
+                                        entries.size(),
+                                        Instant.now().plusSeconds(cacheDurationSeconds));
                             }
 
                             LOGGER.info("Successfully synced {} whitelist entries from API", entries.size());
@@ -277,13 +371,22 @@ public class ApiClient {
                 });
     }
 
+    /**
+     * 强制从API刷新白名单（忽略缓存）
+     */
+    public static CompletableFuture<List<?>> forceSyncWhitelist() {
+        // 清除缓存
+        clearCache();
+        return syncWhitelist(true);
+    }
+
     public static CompletableFuture<Boolean> addEntry(WhitelistManager.WhitelistEntry entry) {
         if (!isEnabled()) {
             return CompletableFuture.completedFuture(false);
         }
 
         // 检查Token权限
-        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
+        if (hasValidToken() || tokenInfo.isValidForWriting()) {
             LOGGER.error("Token does not have write permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -334,7 +437,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (!hasValidToken() || !tokenInfo.isValidForDeleting()) {
+        if (hasValidToken() || !tokenInfo.isValidForDeleting()) {
             LOGGER.error("Token does not have delete permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -376,7 +479,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
+        if (hasValidToken() || tokenInfo.isValidForWriting()) {
             LOGGER.warn("Token does not have write permission, skipping login event logging");
             return;
         }
@@ -384,8 +487,8 @@ public class ApiClient {
         queueRequest(() -> {
             try {
                 Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("player_name", player.getGameProfile().getName());
-                requestBody.put("player_uuid", player.getGameProfile().getId().toString());
+                requestBody.put("player_name", PlayerCompat.getPlayerNameSafe(player));
+                requestBody.put("player_uuid", PlayerCompat.getPlayerUuidSafe(player));
                 requestBody.put("player_ip", getPlayerIP(player));
                 requestBody.put("allowed", allowed);
                 requestBody.put("check_type", checkType != null ? checkType : "none");
@@ -447,11 +550,14 @@ public class ApiClient {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 String url = baseUrl + endpoint;
+                LOGGER.debug("Preparing API request to: {}", url);
+                LOGGER.debug("Method: {}, SkipAuth: {}", method, skipAuth);
 
                 // 构建请求URL（如果使用查询参数认证）
                 if (!skipAuth && !useHeaderAuth) {
                     String separator = url.contains("?") ? "&" : "?";
                     url = url + separator + "token=" + URLEncoder.encode(apiToken, java.nio.charset.StandardCharsets.UTF_8);
+                    LOGGER.debug("Using query parameter authentication");
                 }
 
                 HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
@@ -462,7 +568,12 @@ public class ApiClient {
 
                 // 添加认证头（如果使用头部认证）
                 if (!skipAuth && useHeaderAuth) {
-                    requestBuilder.header("Authorization", "Bearer " + apiToken);
+                    String authHeader = "Bearer " + apiToken;
+                    requestBuilder.header("Authorization", authHeader);
+                    LOGGER.debug("Adding Authorization header: Bearer {}",
+                            apiToken.substring(0, Math.min(8, apiToken.length())) + "...");
+                } else if (skipAuth) {
+                    LOGGER.debug("Skipping authentication (health check)");
                 }
 
                 // 设置方法和请求体
@@ -474,6 +585,7 @@ public class ApiClient {
                         requestBuilder.POST(body == null ?
                                 HttpRequest.BodyPublishers.noBody() :
                                 HttpRequest.BodyPublishers.ofString(body));
+                        LOGGER.debug("Request body: {}", body);
                         break;
                     case "DELETE":
                         requestBuilder.DELETE();
@@ -483,8 +595,13 @@ public class ApiClient {
                 }
 
                 HttpRequest request = requestBuilder.build();
+                LOGGER.debug("Sending HTTP request...");
+
                 HttpResponse<String> response = httpClient.send(request,
                         HttpResponse.BodyHandlers.ofString());
+
+                LOGGER.debug("Response status: {}", response.statusCode());
+                LOGGER.debug("Response body: {}", response.body());
 
                 // 处理响应
                 if (response.statusCode() == 401 || response.statusCode() == 403) {
@@ -492,16 +609,28 @@ public class ApiClient {
                     isTokenVerified.set(false);
                     LOGGER.error("Authentication failed: HTTP {} - {}",
                             response.statusCode(), response.body());
+
+                    // 尝试解析错误信息
+                    try {
+                        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+                        String message = json.get("message").getAsString();
+                        LOGGER.error("API Error: {}", message);
+                    } catch (Exception e) {
+                        LOGGER.error("Could not parse error response");
+                    }
+
                     throw new IOException("Authentication failed: " + response.statusCode());
                 }
 
                 if (response.statusCode() >= 200 && response.statusCode() < 300) {
                     return response.body();
                 } else {
+                    LOGGER.error("API request failed with status: {}", response.statusCode());
                     throw new IOException(String.format("API request failed: %d %s",
                             response.statusCode(), response.body()));
                 }
             } catch (Exception e) {
+                LOGGER.error("API request failed with exception: {}", e.getMessage());
                 throw new RuntimeException("API request failed: " + e.getMessage(), e);
             }
         });
@@ -509,7 +638,8 @@ public class ApiClient {
 
     public static void clearCache() {
         whitelistCache.clear();
-        LOGGER.debug("API cache cleared");
+        lastSyncTime = Instant.MIN;
+        LOGGER.info("API cache cleared");
     }
 
     public static Instant getLastSyncTime() {
@@ -525,7 +655,7 @@ public class ApiClient {
             return "API disabled";
         }
 
-        if (!hasValidToken()) {
+        if (hasValidToken()) {
             return "Token not verified";
         }
 
