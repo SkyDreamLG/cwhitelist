@@ -29,11 +29,16 @@ public class LogHandler {
         boolean ENABLE_LOGGING = Config.ENABLE_LOGGING.get();
         if (ENABLE_LOGGING) {
             String time = LocalDateTime.now().format(TIME_FORMAT);
-            String name = player.getGameProfile().getName();
-            String uuid = player.getGameProfile().getId().toString();
+            String name = PlayerCompat.getPlayerNameSafe(player);
+            String uuid = PlayerCompat.getPlayerUuidSafe(player);
 
             // 提取 IP 地址
-            String ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
+            String ip = "unknown";
+            try {
+                ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
+            } catch (Exception e) {
+                Cwhitelist.LOGGER.error("Failed to get player IP", e);
+            }
 
             String result = allowed ? "ALLOW" : "DENY";
 

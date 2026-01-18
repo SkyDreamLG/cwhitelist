@@ -155,8 +155,8 @@ public class WhitelistManager {
             load();
         }
 
-        String name = player.getGameProfile().getName();
-        UUID uuid = player.getGameProfile().getId();
+        String name = PlayerCompat.getPlayerNameSafe(player);
+        String uuid = PlayerCompat.getPlayerUuidSafe(player);
         String ip = getPlayerIP(player);
 
         boolean ENABLE_NAME_CHECK = Config.ENABLE_NAME_CHECK.get();
@@ -175,7 +175,7 @@ public class WhitelistManager {
                     break;
                 }
                 if (ENABLE_UUID_CHECK && entry.type.equals("uuid") &&
-                        entry.value.equalsIgnoreCase(uuid.toString())) {
+                        entry.value.equalsIgnoreCase(uuid)) {
                     checkType = "uuid";
                     allowed = true;
                     break;
@@ -189,7 +189,7 @@ public class WhitelistManager {
             }
         }
 
-        // 记录本地日志
+        // 记录日志
         LogHandler.log(player, allowed);
 
         // 发送登录事件到API（如果启用且API可用）
@@ -232,7 +232,7 @@ public class WhitelistManager {
         }
     }
 
-    private static void saveToFile() {
+    static void saveToFile() {
         try {
             synchronized (entries) {
                 Files.writeString(WHITELIST_PATH, GSON.toJson(entries));

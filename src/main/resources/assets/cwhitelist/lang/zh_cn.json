@@ -1,15 +1,49 @@
 {
-  "commands.cwhitelist.add.success": "条目已添加: ",
-  "commands.cwhitelist.add.failure.exists": "条目已存在: ",
-  "commands.cwhitelist.add.failure.invalid": "输入有误! 请输入 name/uuid/ip",
-  "commands.cwhitelist.add.failure.error": "条目添加失败: %s",
+  "cwhitelist.error.invalid_type": "§c无效的条目类型'%s'。必须是: name, uuid, 或 ip",
+  "cwhitelist.error.entry_exists": "§c条目已存在: %s=%s",
+  "cwhitelist.error.add_failed": "§c添加条目失败: %s",
+  "cwhitelist.error.entry_not_found": "§c未找到条目: %s=%s",
 
-  "commands.cwhitelist.remove.success": "条目已移除: ",
-  "commands.cwhitelist.remove.failure": "条目不存在!",
+  "cwhitelist.success.entry_added": "§a成功添加条目: %s=%s",
+  "cwhitelist.success.entry_removed": "§a成功移除条目: %s=%s",
 
-  "commands.cwhitelist.list.title": "白名单列表:\n",
+  "cwhitelist.info.added_to_api": "§7已添加到API并本地同步",
+  "cwhitelist.info.added_to_local": "§7已添加到本地白名单文件",
+  "cwhitelist.info.removed_from_api": "§7已从API移除并本地同步",
+  "cwhitelist.info.removed_from_local": "§7已从本地白名单文件移除",
 
-  "commands.cwhitelist.reload.success": "白名单配置已重载!",
+  "cwhitelist.list.api_with_token": "§e=== CWhitelist §a(API模式) §e===\n§7令牌: §f%s\n§7权限: §f读:%s §f写:%s §f删:%s\n§a总条目数: §f%s",
+  "cwhitelist.list.api_mode": "§e=== CWhitelist §a(API模式) §e===\n§a总条目数: §f%s",
+  "cwhitelist.list.api_unavailable": "§e=== CWhitelist §6(本地模式 - API不可用) §e===\n§a总条目数: §f%s",
+  "cwhitelist.list.local_mode": "§e=== CWhitelist (本地模式) ===\n§a总条目数: §f%s",
+  "cwhitelist.list.entry_item": "  §7- §f%s: §e%s",
+  "cwhitelist.list.no_entries": "§7未找到任何条目。",
 
-  "commands.cwhitelist.banned": "你不在服务器白名单内!"
+  "cwhitelist.reload.starting": "§a重新加载白名单...",
+  "cwhitelist.reload.success": "§a白名单重新加载成功",
+  "cwhitelist.reload.source_api": "§7来源: API (已同步)",
+  "cwhitelist.reload.source_local": "§7来源: 本地文件 (API不可用)",
+
+  "cwhitelist.api.disabled": "§cAPI集成已禁用",
+  "cwhitelist.api.status.title": "§e=== API状态 ===\n§7基础URL: §f%s\n§7启用: %s\n§7令牌配置: %s\n§7认证方式: §f%s\n§7当前模式: %s",
+  "cwhitelist.api.status.token_status": "§7令牌状态:\n  §f%s",
+
+  "cwhitelist.api.health.checking": "§a检查API健康状态...",
+  "cwhitelist.api.health.success": "§aAPI健康检查通过",
+  "cwhitelist.api.health.failed": "§cAPI健康检查失败",
+  "cwhitelist.api.health.error": "§cAPI健康检查错误: %s",
+
+  "cwhitelist.api.verify.checking": "§a验证API令牌...",
+  "cwhitelist.api.verify.success": "§a令牌验证成功!",
+  "cwhitelist.api.verify.token_info": "§7名称: §f%s\n§7权限: 读:%s 写:%s 删:%s",
+  "cwhitelist.api.verify.failed": "§c令牌验证失败",
+  "cwhitelist.api.verify.error": "§c令牌验证错误: %s",
+
+  "cwhitelist.api.sync.starting": "§a从API同步白名单...",
+  "cwhitelist.api.sync.success": "§a成功从API同步 §f%s§a 个条目",
+  "cwhitelist.api.sync.no_entries": "§c未从API接收到任何条目",
+  "cwhitelist.api.sync.timeout": "§cAPI请求超时(30秒)",
+  "cwhitelist.api.sync.error": "§c同步错误: %s",
+
+  "cwhitelist.api.cache.cleared": "§aAPI缓存已清除"
 }

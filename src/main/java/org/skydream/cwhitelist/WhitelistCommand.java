@@ -9,13 +9,9 @@ import net.minecraft.network.chat.MutableComponent;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 public class WhitelistCommand {
-    public static String getLocaleString(String langKey) {
-        MutableComponent component = Component.translatable(langKey);
-        return component.getString();
-    }
-
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("cwhitelist")
                 .requires(source -> source.hasPermission(4))
@@ -89,8 +85,8 @@ public class WhitelistCommand {
     private static int addEntry(CommandSourceStack source, String type, String value) {
         // 校验 type 是否合法
         if (!Arrays.asList("name", "uuid", "ip").contains(type.toLowerCase())) {
-            source.sendFailure(Component.literal(
-                    "§cInvalid entry type. Must be: name, uuid, or ip"));
+            source.sendFailure(Component.translatable(
+                    "cwhitelist.error.invalid_type", type));
             return 0;
         }
 
@@ -100,29 +96,29 @@ public class WhitelistCommand {
 
         // 检查条目是否已存在
         if (WhitelistManager.containsEntry(entry)) {
-            source.sendFailure(Component.literal(
-                    "§cEntry already exists: " + type + "=" + value));
+            source.sendFailure(Component.translatable(
+                    "cwhitelist.error.entry_exists", type, value));
             return 2;
         }
 
         try {
             // 添加条目到白名单
             WhitelistManager.addEntry(entry);
-            source.sendSuccess(() -> Component.literal(
-                    "§aSuccessfully added entry: " + type + "=" + value), true);
+            source.sendSuccess(() -> Component.translatable(
+                    "cwhitelist.success.entry_added", type, value), true);
 
             // 显示当前使用的源
             if (WhitelistManager.isUsingApi()) {
-                source.sendSuccess(() -> Component.literal(
-                        "§7Added to API and synced locally"), false);
+                source.sendSuccess(() -> Component.translatable(
+                        "cwhitelist.info.added_to_api"), false);
             } else {
-                source.sendSuccess(() -> Component.literal(
-                        "§7Added to local whitelist file"), false);
+                source.sendSuccess(() -> Component.translatable(
+                        "cwhitelist.info.added_to_local"), false);
             }
             return 1;
         } catch (Exception e) {
-            source.sendFailure(Component.literal(
-                    "§cFailed to add entry: " + e.getMessage()));
+            source.sendFailure(Component.translatable(
+                    "cwhitelist.error.add_failed", e.getMessage()));
             return 3;
         }
     }
@@ -130,87 +126,101 @@ public class WhitelistCommand {
     private static int removeEntry(CommandSourceStack source, String type, String value) {
         boolean removed = WhitelistManager.removeEntry(type, value);
         if (removed) {
-            source.sendSuccess(() -> Component.literal(
-                    "§aSuccessfully removed entry: " + type + "=" + value), true);
+            source.sendSuccess(() -> Component.translatable(
+                    "cwhitelist.success.entry_removed", type, value), true);
 
             // 显示当前使用的源
             if (WhitelistManager.isUsingApi()) {
-                source.sendSuccess(() -> Component.literal(
-                        "§7Removed from API and synced locally"), false);
+                source.sendSuccess(() -> Component.translatable(
+                        "cwhitelist.info.removed_from_api"), false);
             } else {
-                source.sendSuccess(() -> Component.literal(
-                        "§7Removed from local whitelist file"), false);
+                source.sendSuccess(() -> Component.translatable(
+                        "cwhitelist.info.removed_from_local"), false);
             }
         } else {
-            source.sendFailure(Component.literal(
-                    "§cEntry not found: " + type + "=" + value));
+            source.sendFailure(Component.translatable(
+                    "cwhitelist.error.entry_not_found", type, value));
         }
         return removed ? 1 : 0;
     }
 
     private static int listEntries(CommandSourceStack source) {
-        StringBuilder sb = new StringBuilder();
+        Component message;
 
-        // 显示当前模式
         if (Config.ENABLE_API.get()) {
             if (WhitelistManager.isUsingApi()) {
-                sb.append("§e=== CWhitelist §a(API Mode) §e===\n");
                 ApiClient.TokenInfo tokenInfo = ApiClient.getTokenInfo();
                 if (tokenInfo != null) {
-                    sb.append("§7Token: §f").append(tokenInfo.name).append("\n");
-                    sb.append("§7Permissions: §fR:");
-                    sb.append(tokenInfo.canRead ? "§a✓" : "§c✗").append("§f W:");
-                    sb.append(tokenInfo.canWrite ? "§a✓" : "§c✗").append("§f D:");
-                    sb.append(tokenInfo.canDelete ? "§a✓" : "§c✗").append("\n");
+                    message = Component.translatable(
+                            "cwhitelist.list.api_with_token",
+                            tokenInfo.name,
+                            tokenInfo.canRead ? "✓" : "✗",
+                            tokenInfo.canWrite ? "✓" : "✗",
+                            tokenInfo.canDelete ? "✓" : "✗",
+                            WhitelistManager.getEntryCount()
+                    );
+                } else {
+                    message = Component.translatable(
+                            "cwhitelist.list.api_mode",
+                            WhitelistManager.getEntryCount()
+                    );
                 }
             } else {
-                sb.append("§e=== CWhitelist §6(Local Mode - API Unavailable) §e===\n");
+                message = Component.translatable(
+                        "cwhitelist.list.api_unavailable",
+                        WhitelistManager.getEntryCount()
+                );
             }
         } else {
-            sb.append("§e=== CWhitelist (Local Mode) ===\n");
+            message = Component.translatable(
+                    "cwhitelist.list.local_mode",
+                    WhitelistManager.getEntryCount()
+            );
         }
 
-        // 显示条目
-        sb.append("§aTotal entries: §f")
-                .append(WhitelistManager.getEntryCount())
-                .append("\n");
-
+        // 添加条目列表
         if (WhitelistManager.getEntryCount() > 0) {
-            sb.append("§7Entries:\n");
+            MutableComponent entriesList = Component.literal("\n");
             WhitelistManager.getEntries().forEach(e ->
-                    sb.append("  §7- §f")
-                            .append(e.getType())
-                            .append(": §e")
-                            .append(e.getValue())
-                            .append("\n"));
+                    entriesList.append(Component.translatable(
+                            "cwhitelist.list.entry_item",
+                            e.getType(),
+                            e.getValue()
+                    )).append("\n")
+            );
+            message = message.copy().append(entriesList);
         } else {
-            sb.append("§7No entries found.\n");
+            message = message.copy().append("\n")
+                    .append(Component.translatable("cwhitelist.list.no_entries"));
         }
 
-        source.sendSuccess(() -> Component.literal(sb.toString()), false);
+        Component finalMessage = message;
+        source.sendSuccess(() -> finalMessage, false);
         return 1;
     }
 
     private static int reload(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.literal("§aReloading whitelist..."), false);
+        source.sendSuccess(() -> Component.translatable("cwhitelist.reload.starting"), false);
 
         WhitelistManager.reload();
 
         CompletableFuture.runAsync(() -> {
             try {
-                Thread.sleep(1000); // 等待加载完成
-                source.sendSuccess(() -> Component.literal(
-                        "§aWhitelist reloaded successfully"), false);
+                Thread.sleep(1000);
+                source.getServer().execute(() -> {
+                    source.sendSuccess(() -> Component.translatable(
+                            "cwhitelist.reload.success"), false);
 
-                if (Config.ENABLE_API.get()) {
-                    if (WhitelistManager.isUsingApi()) {
-                        source.sendSuccess(() -> Component.literal(
-                                "§7Source: API (Synced)"), false);
-                    } else {
-                        source.sendSuccess(() -> Component.literal(
-                                "§7Source: Local File (API unavailable)"), false);
+                    if (Config.ENABLE_API.get()) {
+                        if (WhitelistManager.isUsingApi()) {
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.reload.source_api"), false);
+                        } else {
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.reload.source_local"), false);
+                        }
                     }
-                }
+                });
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -221,48 +231,58 @@ public class WhitelistCommand {
 
     private static int apiStatus(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.literal("§cAPI integration is disabled in config"));
+            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
             return 0;
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("§e=== API Status ===\n");
-        sb.append("§7Base URL: §f").append(Config.API_BASE_URL.get()).append("\n");
-        sb.append("§7Enabled: §f").append(Config.ENABLE_API.get() ? "§aYes" : "§cNo").append("\n");
-        sb.append("§7Token Configured: §f")
-                .append(Config.API_TOKEN.get() != null && !Config.API_TOKEN.get().isEmpty() ?
-                        "§aYes" : "§cNo").append("\n");
-        sb.append("§7Auth Method: §f")
-                .append(Config.API_USE_HEADER_AUTH.get() ? "Header" : "Query Param").append("\n");
-        sb.append("§7Current Mode: §f")
-                .append(WhitelistManager.isUsingApi() ? "§aAPI" : "§6Local (Fallback)").append("\n");
+        Config.API_TOKEN.get();
+        Component status = Component.translatable(
+                "cwhitelist.api.status.title",
+                Config.API_BASE_URL.get(),
+                Config.ENABLE_API.get() ? "§aYes" : "§cNo",
+                !Config.API_TOKEN.get().isEmpty() ? "§aYes" : "§cNo",
+                Config.API_USE_HEADER_AUTH.get() ? "Header" : "Query Param",
+                WhitelistManager.isUsingApi() ? "§aAPI" : "§6Local (Fallback)"
+        );
 
         if (ApiClient.isEnabled()) {
-            sb.append("\n§7Token Status:\n");
-            sb.append("  §f").append(ApiClient.getTokenStatus()).append("\n");
+            status = status.copy().append("\n")
+                    .append(Component.translatable("cwhitelist.api.status.token_status",
+                            ApiClient.getTokenStatus()));
         }
 
-        source.sendSuccess(() -> Component.literal(sb.toString()), false);
+        Component finalStatus = status;
+        source.sendSuccess(() -> finalStatus, false);
         return 1;
     }
 
     private static int apiHealthCheck(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.literal("§cAPI integration is disabled"));
+            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("§aChecking API health..."), false);
+        source.sendSuccess(() -> Component.translatable("cwhitelist.api.health.checking"), false);
 
-        ApiClient.healthCheck().thenAccept(healthy -> {
-            if (healthy) {
-                source.sendSuccess(() -> Component.literal("§aAPI health check passed"), false);
-            } else {
-                source.sendFailure(Component.literal("§cAPI health check failed"));
+        CompletableFuture.runAsync(() -> {
+            try {
+                boolean healthy = ApiClient.healthCheck().get(30, TimeUnit.SECONDS);
+                source.getServer().execute(() -> {
+                    if (healthy) {
+                        source.sendSuccess(() -> Component.translatable(
+                                "cwhitelist.api.health.success"), false);
+                    } else {
+                        source.sendFailure(Component.translatable(
+                                "cwhitelist.api.health.failed"));
+                    }
+                });
+            } catch (Exception e) {
+                source.getServer().execute(() -> {
+                    source.sendFailure(Component.translatable(
+                            "cwhitelist.api.health.error",
+                            e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                });
             }
-        }).exceptionally(e -> {
-            source.sendFailure(Component.literal("§cAPI health check error: " + e.getMessage()));
-            return null;
         });
 
         return 1;
@@ -270,31 +290,40 @@ public class WhitelistCommand {
 
     private static int apiVerify(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.literal("§cAPI integration is disabled"));
+            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("§aVerifying API token..."), false);
+        source.sendSuccess(() -> Component.translatable("cwhitelist.api.verify.checking"), false);
 
-        ApiClient.verifyToken().thenAccept(verified -> {
-            if (verified) {
-                ApiClient.TokenInfo tokenInfo = ApiClient.getTokenInfo();
-                if (tokenInfo != null) {
-                    source.sendSuccess(() -> Component.literal(
-                            "§aToken verified successfully!"), false);
-                    source.sendSuccess(() -> Component.literal(
-                            "§7Name: §f" + tokenInfo.name), false);
-                    source.sendSuccess(() -> Component.literal(
-                            "§7Permissions: R:" + (tokenInfo.canRead ? "✓" : "✗") +
-                                    " W:" + (tokenInfo.canWrite ? "✓" : "✗") +
-                                    " D:" + (tokenInfo.canDelete ? "✓" : "✗")), false);
-                }
-            } else {
-                source.sendFailure(Component.literal("§cToken verification failed"));
+        CompletableFuture.runAsync(() -> {
+            try {
+                boolean verified = ApiClient.verifyToken().get(30, TimeUnit.SECONDS);
+                source.getServer().execute(() -> {
+                    if (verified) {
+                        ApiClient.TokenInfo tokenInfo = ApiClient.getTokenInfo();
+                        if (tokenInfo != null) {
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.api.verify.success"), false);
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.api.verify.token_info",
+                                    tokenInfo.name,
+                                    tokenInfo.canRead ? "✓" : "✗",
+                                    tokenInfo.canWrite ? "✓" : "✗",
+                                    tokenInfo.canDelete ? "✓" : "✗"), false);
+                        }
+                    } else {
+                        source.sendFailure(Component.translatable(
+                                "cwhitelist.api.verify.failed"));
+                    }
+                });
+            } catch (Exception e) {
+                source.getServer().execute(() -> {
+                    source.sendFailure(Component.translatable(
+                            "cwhitelist.api.verify.error",
+                            e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                });
             }
-        }).exceptionally(e -> {
-            source.sendFailure(Component.literal("§cToken verification error: " + e.getMessage()));
-            return null;
         });
 
         return 1;
@@ -302,23 +331,51 @@ public class WhitelistCommand {
 
     private static int apiSync(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.literal("§cAPI integration is disabled"));
+            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.literal("§aSyncing whitelist from API..."), false);
+        source.sendSuccess(() -> Component.translatable("cwhitelist.api.sync.starting"), false);
 
-        ApiClient.syncWhitelist().thenAccept(entries -> {
-            if (entries != null) {
-                source.sendSuccess(() -> Component.literal(
-                        String.format("§aSuccessfully synced §f%d§a entries from API",
-                                entries.size())), false);
-            } else {
-                source.sendFailure(Component.literal("§cFailed to sync from API"));
+        CompletableFuture.runAsync(() -> {
+            try {
+                // 使用强制同步方法，忽略缓存
+                java.util.List<WhitelistManager.WhitelistEntry> entries =
+                        (java.util.List<WhitelistManager.WhitelistEntry>) ApiClient.forceSyncWhitelist().get(30, TimeUnit.SECONDS);
+
+                source.getServer().execute(() -> {
+                    if (entries != null && !entries.isEmpty()) {
+                        // 强制重新加载白名单管理器以应用新的数据
+                        WhitelistManager.reload();
+
+                        source.sendSuccess(() -> Component.translatable(
+                                "cwhitelist.api.sync.success", entries.size()), false);
+
+                        // 显示当前模式
+                        if (WhitelistManager.isUsingApi()) {
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.reload.source_api"), false);
+                        } else {
+                            source.sendSuccess(() -> Component.translatable(
+                                    "cwhitelist.reload.source_local"), false);
+                        }
+                    } else {
+                        source.sendFailure(Component.translatable(
+                                "cwhitelist.api.sync.no_entries"));
+                    }
+                });
+            } catch (java.util.concurrent.TimeoutException e) {
+                source.getServer().execute(() -> {
+                    source.sendFailure(Component.translatable(
+                            "cwhitelist.api.sync.timeout"));
+                });
+            } catch (Exception e) {
+                source.getServer().execute(() -> {
+                    source.sendFailure(Component.translatable(
+                            "cwhitelist.api.sync.error",
+                            e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                });
             }
-        }).exceptionally(e -> {
-            source.sendFailure(Component.literal("§cSync error: " + e.getMessage()));
-            return null;
         });
 
         return 1;
@@ -326,12 +383,17 @@ public class WhitelistCommand {
 
     private static int clearCache(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.literal("§cAPI integration is disabled"));
+            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
             return 0;
         }
 
         ApiClient.clearCache();
-        source.sendSuccess(() -> Component.literal("§aAPI cache cleared"), true);
+        source.sendSuccess(() -> Component.translatable("cwhitelist.api.cache.cleared"), true);
         return 1;
+    }
+
+    public static String getLocaleString(String langKey) {
+        // 直接返回翻译组件
+        return Component.translatable(langKey).getString();
     }
 }

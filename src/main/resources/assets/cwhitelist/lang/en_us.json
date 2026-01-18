@@ -1,15 +1,49 @@
 {
-  "commands.cwhitelist.add.success": "Entry added: ",
-  "commands.cwhitelist.add.failure.exists": "Entry already exists: ",
-  "commands.cwhitelist.add.failure.invalid": "Invalid input! Please enter name/uuid/ip",
-  "commands.cwhitelist.add.failure.error": "Failed to add entry: ",
+  "cwhitelist.error.invalid_type": "§cInvalid entry type '%s'. Must be: name, uuid, or ip",
+  "cwhitelist.error.entry_exists": "§cEntry already exists: %s=%s",
+  "cwhitelist.error.add_failed": "§cFailed to add entry: %s",
+  "cwhitelist.error.entry_not_found": "§cEntry not found: %s=%s",
 
-  "commands.cwhitelist.remove.success": "Entry removed: ",
-  "commands.cwhitelist.remove.failure": "Entry does not exist!",
+  "cwhitelist.success.entry_added": "§aSuccessfully added entry: %s=%s",
+  "cwhitelist.success.entry_removed": "§aSuccessfully removed entry: %s=%s",
 
-  "commands.cwhitelist.list.title": "Whitelist entries:\n",
+  "cwhitelist.info.added_to_api": "§7Added to API and synced locally",
+  "cwhitelist.info.added_to_local": "§7Added to local whitelist file",
+  "cwhitelist.info.removed_from_api": "§7Removed from API and synced locally",
+  "cwhitelist.info.removed_from_local": "§7Removed from local whitelist file",
 
-  "commands.cwhitelist.reload.success": "Whitelist configuration reloaded!",
+  "cwhitelist.list.api_with_token": "§e=== CWhitelist §a(API Mode) §e===\n§7Token: §f%s\n§7Permissions: §fR:%s §fW:%s §fD:%s\n§aTotal entries: §f%s",
+  "cwhitelist.list.api_mode": "§e=== CWhitelist §a(API Mode) §e===\n§aTotal entries: §f%s",
+  "cwhitelist.list.api_unavailable": "§e=== CWhitelist §6(Local Mode - API Unavailable) §e===\n§aTotal entries: §f%s",
+  "cwhitelist.list.local_mode": "§e=== CWhitelist (Local Mode) ===\n§aTotal entries: §f%s",
+  "cwhitelist.list.entry_item": "  §7- §f%s: §e%s",
+  "cwhitelist.list.no_entries": "§7No entries found.",
 
-  "commands.cwhitelist.banned": "You are not in the whitelist!"
+  "cwhitelist.reload.starting": "§aReloading whitelist...",
+  "cwhitelist.reload.success": "§aWhitelist reloaded successfully",
+  "cwhitelist.reload.source_api": "§7Source: API (Synced)",
+  "cwhitelist.reload.source_local": "§7Source: Local File (API unavailable)",
+
+  "cwhitelist.api.disabled": "§cAPI integration is disabled",
+  "cwhitelist.api.status.title": "§e=== API Status ===\n§7Base URL: §f%s\n§7Enabled: %s\n§7Token Configured: %s\n§7Auth Method: §f%s\n§7Current Mode: %s",
+  "cwhitelist.api.status.token_status": "§7Token Status:\n  §f%s",
+
+  "cwhitelist.api.health.checking": "§aChecking API health...",
+  "cwhitelist.api.health.success": "§aAPI health check passed",
+  "cwhitelist.api.health.failed": "§cAPI health check failed",
+  "cwhitelist.api.health.error": "§cAPI health check error: %s",
+
+  "cwhitelist.api.verify.checking": "§aVerifying API token...",
+  "cwhitelist.api.verify.success": "§aToken verified successfully!",
+  "cwhitelist.api.verify.token_info": "§7Name: §f%s\n§7Permissions: R:%s W:%s D:%s",
+  "cwhitelist.api.verify.failed": "§cToken verification failed",
+  "cwhitelist.api.verify.error": "§cToken verification error: %s",
+
+  "cwhitelist.api.sync.starting": "§aSyncing whitelist from API...",
+  "cwhitelist.api.sync.success": "§aSuccessfully synced §f%s§a entries from API",
+  "cwhitelist.api.sync.no_entries": "§cNo entries received from API",
+  "cwhitelist.api.sync.timeout": "§cAPI request timed out after 30 seconds",
+  "cwhitelist.api.sync.error": "§cSync error: %s",
+
+  "cwhitelist.api.cache.cleared": "§aAPI cache cleared"
 }
