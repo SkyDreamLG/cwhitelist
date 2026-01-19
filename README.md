@@ -437,7 +437,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - **Documentation**: [GitHub Wiki](https://github.com/SkyDreamLG/CWhitelist/wiki)
 - **Issues**: [GitHub Issues](https://github.com/SkyDreamLG/CWhitelist/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/SkyDreamLG/CWhitelist/discussions)
-- **Email**: support@skydream.org
+- **Email**: 1607002411@qq.com
 
 ---
 
