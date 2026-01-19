@@ -437,7 +437,7 @@ public interface CustomApiClient {
 - **文档**：[GitHub Wiki](https://github.com/SkyDreamLG/CWhitelist/wiki)
 - **问题跟踪**：[GitHub Issues](https://github.com/SkyDreamLG/CWhitelist/issues)
 - **讨论**：[GitHub Discussions](https://github.com/SkyDreamLG/CWhitelist/discussions)
-- **邮箱**：support@skydream.org
+- **邮箱**：1607002411@qq.com
 
 ---
 
