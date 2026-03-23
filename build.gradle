@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'idea'
-    id 'net.neoforged.moddev' version '2.0.78'
+    id 'net.neoforged.moddev' version '2.0.140'
 }
 
 version = mod_version
@@ -10,9 +10,6 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
-    maven {
-        url "https://cursemaven.com"
-    }
 }
 
 base {
@@ -58,7 +55,7 @@ neoForge {
         }
 
         data {
-            data()
+            clientData()
 
             // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
             // gameDirectory = project.file('run-data')
@@ -119,8 +116,6 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-
-    implementation "curse.maven:open-parties-and-claims-636608:7112753"
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

@@ -1,6 +1,8 @@
 package org.skydream.cwhitelist;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.logging.LogUtils;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
@@ -10,9 +12,10 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import org.slf4j.Logger;
 
 import java.util.concurrent.CompletableFuture;
@@ -34,6 +37,9 @@ public class Cwhitelist {
 
         // 注册命令
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
+
+        // 注册权限节点
+        NeoForge.EVENT_BUS.addListener(this::onPermissionGather);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -56,7 +62,7 @@ public class Cwhitelist {
                 // 检查Token状态
                 CompletableFuture.runAsync(() -> {
                     try {
-                        Thread.sleep(2000); // 等待API初始化
+                        Thread.sleep(2000);
                         if (ApiClient.isEnabled()) {
                             LOGGER.info("Token Status: {}", ApiClient.getTokenStatus());
                         }
@@ -69,7 +75,31 @@ public class Cwhitelist {
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
+        LOGGER.info("Registering CWhitelist commands...");
         WhitelistCommand.register(event.getDispatcher());
+        LOGGER.info("CWhitelist commands registered successfully");
+    }
+
+    /**
+     * 注册所有权限节点
+     */
+    private void onPermissionGather(PermissionGatherEvent.Nodes event) {
+        event.addNodes(
+                WhitelistCommand.PERMISSION_ADMIN,
+                WhitelistCommand.PERMISSION_USE,
+                WhitelistCommand.PERMISSION_ADD,
+                WhitelistCommand.PERMISSION_REMOVE,
+                WhitelistCommand.PERMISSION_LIST,
+                WhitelistCommand.PERMISSION_RELOAD,
+                WhitelistCommand.PERMISSION_API,
+                WhitelistCommand.PERMISSION_API_STATUS,
+                WhitelistCommand.PERMISSION_API_HEALTH,
+                WhitelistCommand.PERMISSION_API_SYNC,
+                WhitelistCommand.PERMISSION_API_VERIFY,
+                WhitelistCommand.PERMISSION_API_CLEARCACHE
+        );
+
+        LOGGER.info("Registered {} permission nodes for CWhitelist", 13);
     }
 
     @SubscribeEvent
@@ -95,8 +125,8 @@ public class Cwhitelist {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // 检查白名单
             if (!WhitelistManager.isAllowed(player)) {
-                // 使用客户端语言环境获取翻译
                 net.minecraft.network.chat.Component kickMessage = net.minecraft.network.chat.Component.translatable(
                         "cwhitelist.player.kick.not_whitelisted"
                 ).withStyle(net.minecraft.ChatFormatting.RED);
