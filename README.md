@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/SkyDreamLG/CWhitelist/releases"><img alt="release" src="https://img.shields.io/github/v/release/SkyDreamLG/CWhitelist?style=for-the-badge&color=4A90E2"></a>
   <a href="https://github.com/SkyDreamLG/CWhitelist/issues"><img alt="issues" src="https://img.shields.io/github/issues/SkyDreamLG/CWhitelist?style=for-the-badge&color=FF6B6B"></a>
-  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/badge/license-GPL--3.0-blue?style=for-the-badge"></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/badge/license-LGPL--3.0-blue?style=for-the-badge"></a>
   <a href="https://neo-forge.net/"><img alt="NeoForge" src="https://img.shields.io/badge/NeoForge-1.21.x-7B68EE?style=for-the-badge&logo=curseforge"></a>
 </p>
 
