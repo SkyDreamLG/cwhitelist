@@ -138,7 +138,7 @@ public class ApiClient {
         }
 
         public boolean isValidForWriting() {
-            return !isActive || !canWrite || isExpired();
+            return isActive && canWrite && !isExpired();
         }
 
         public boolean isValidForDeleting() {
@@ -229,7 +229,7 @@ public class ApiClient {
     }
 
     public static boolean hasValidToken() {
-        return !isTokenVerified.get() || tokenInfo == null;
+        return isTokenVerified.get() && tokenInfo != null;
     }
 
     public static CompletableFuture<Boolean> verifyToken() {
@@ -293,7 +293,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || !tokenInfo.isValidForReading()) {
+        if (!hasValidToken() || !tokenInfo.isValidForReading()) {
             LOGGER.error("Token does not have read permission or is invalid");
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
@@ -387,7 +387,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || tokenInfo.isValidForWriting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
             LOGGER.error("Token does not have write permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -438,7 +438,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || !tokenInfo.isValidForDeleting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForDeleting()) {
             LOGGER.error("Token does not have delete permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -480,7 +480,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || tokenInfo.isValidForWriting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
             LOGGER.warn("Token does not have write permission, skipping login event logging");
             return;
         }
@@ -658,7 +658,7 @@ public class ApiClient {
             return "API disabled";
         }
 
-        if (hasValidToken()) {
+        if (!hasValidToken()) {
             return "Token not verified";
         }
 
