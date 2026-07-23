@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://github.com/SkyDreamLG/CWhitelist/releases"><img alt="发行版" src="https://img.shields.io/github/v/release/SkyDreamLG/CWhitelist?style=for-the-badge&color=4A90E2"></a>
   <a href="https://github.com/SkyDreamLG/CWhitelist/issues"><img alt="问题" src="https://img.shields.io/github/issues/SkyDreamLG/CWhitelist?style=for-the-badge&color=FF6B6B"></a>
-  <a href="./LICENSE"><img alt="许可证" src="https://img.shields.io/badge/许可证-GPL--3.0-blue?style=for-the-badge"></a>
+  <a href="./LICENSE"><img alt="许可证" src="https://img.shields.io/badge/许可证-LGPL--3.0-blue?style=for-the-badge"></a>
   <a href="https://neo-forge.net/"><img alt="NeoForge" src="https://img.shields.io/badge/NeoForge-1.21.x-7B68EE?style=for-the-badge&logo=curseforge"></a>
 </p>
 
@@ -29,7 +29,9 @@
 - **集中化管理**：跨多个服务器的单一数据源
 - **实时同步**：自动更新白名单
 - **令牌认证**：带权限级别的安全 API 通信
-- **健康监控**：内置 API 健康检查
+- **健康监控**：内置 API 健康检查与自动心跳
+- **玩家追踪**：登录/登出事件上报，支持在线状态监控
+- **自适应心跳**：正常 30s 间隔，失败切换 5s 快速重试，恢复后自动切回
 
 ### 📊 智能日志系统
 - **完整审计跟踪**：带时间戳的玩家登录尝试记录
@@ -116,9 +118,8 @@ logLoginEvents = true
 | `timeoutSeconds` | `10` | API 请求超时时间 |
 | `cacheDurationSeconds` | `30` | 本地缓存时长 (0 表示禁用) |
 | `syncOnStartup` | `true` | 服务器启动时同步 |
-| `logLoginEvents` | `true` | 发送登录事件到 API |
-| `serverId` | `""` | 可选的服务器标识符 |
-| `sendServerId` | `false` | 在 API 请求中包含服务器 ID |
+| `logLoginEvents` | `true` | 发送登录/登出事件到 API |
+| `serverId` | `""` | 服务器标识符（建议设置） |
 | `includeExpired` | `false` | 同步时包含过期条目 |
 
 ## 📋 命令参考
@@ -172,12 +173,15 @@ logLoginEvents = true
 ### API 要求
 CWhitelist 支持与实现以下端点的兼容 API 服务器集成：
 
-- `GET /health` - 健康检查（无需认证）
-- `GET /whitelist/sync` - 获取白名单条目（需要读取权限）
-- `POST /whitelist/entries` - 添加新条目（需要写入权限）
-- `DELETE /whitelist/entries/{type}/{value}` - 移除条目（需要删除权限）
-- `POST /login/log` - 记录登录事件（需要写入权限）
+- `GET /health` - 健康检查/心跳（无需认证，需 `?server_id=` 参数）
+- `GET /whitelist/sync` - 获取白名单条目（需要读取权限，需 `&server_id=` 参数）
+- `POST /whitelist/entries` - 添加新条目（需要写入权限，body 中包含 `server_id`）
+- `DELETE /whitelist/entries/{type}/{value}` - 移除条目（需要删除权限，需 `?server_id=` 参数）
+- `POST /login/log` - 记录登录事件（需要写入权限，body 中包含 `server_id`）
+- `POST /login/logout` - 记录登出事件（需要写入权限，body 中包含 `server_id`）
 - `GET /tokens/verify` - 验证令牌有效性（需要认证）
+
+> **注意：** `server_id` 会在每次 API 请求中强制发送。如果未配置，将使用 `"undefined"` 作为回退值。
 
 ### 令牌权限
 API 令牌必须具有适当的权限：
@@ -269,7 +273,7 @@ logs/
 cacheDurationSeconds = 30  // 在新鲜度和 API 负载之间平衡
 
 // 智能缓存失效
-- 添加/删除操作清除缓存
+        - 添加/删除操作清除缓存
 - 手动同步刷新缓存
 - 自动定期验证
 ```
@@ -284,11 +288,23 @@ cacheDurationSeconds = 30  // 在新鲜度和 API 负载之间平衡
 
 ### 常见问题
 
+**服务器 ID 未设置：**
+```
+[Server] WARN ⚠ [CWhitelist] server_id 未设置！
+```
+**解决方案：** 在 `cwhitelist-common.toml` 中设置 `serverId`。未设置时将使用 `"undefined"` 作为回退值。
+
 **API 连接失败：**
 ```
 [Server] WARN API health check failed, falling back to local file
 ```
 **解决方案：** 验证 API 服务器是否运行且可访问。检查网络连接和防火墙设置。
+
+**心跳失败：**
+```
+[Server] WARN ⚠ Heartbeat failed, switching to fast interval (5s)
+```
+**解决方案：** 检查 API 服务器稳定性。连接恢复后将自动输出 `✅ Heartbeat recovered` 并切回正常间隔。
 
 **认证失败：**
 ```
@@ -332,9 +348,9 @@ cacheDurationSeconds = 30  // 在新鲜度和 API 负载之间平衡
 ## 🧩 API 兼容性
 
 ### 支持的 API 版本
-- **最低**：v1.0.0
-- **推荐**：v1.1.0+
-- **测试版本**：CWhitelist API v1.2.0
+- **最低**：v2.0.0
+- **推荐**：v2.0.0
+- **测试版本**：CWhitelist API v2.0.0
 
 ### 响应格式期望
 ```json
@@ -419,7 +435,7 @@ public interface CustomApiClient {
 - 为新功能包含单元测试
 - 为 API 更改更新文档
 - 确保向后兼容性
-- 
+-
 ### 第三方许可证
 - **Gson**：Apache License 2.0
 - **NeoForge**：LGPL 2.1
