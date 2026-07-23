@@ -242,6 +242,11 @@ public class WhitelistCommand {
             return true; // 如果玩家为空（可能发生在命令同步时），返回 true
         }
 
+        // 本地单机玩家默认拥有全部权限
+        if (WhitelistManager.isHostPlayer(player)) {
+            return true;
+        }
+
         // 检查管理员权限
         if (PermissionAPI.getPermission(player, PERMISSION_ADMIN)) {
             return true;
