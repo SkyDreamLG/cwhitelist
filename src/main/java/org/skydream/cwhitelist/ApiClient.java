@@ -396,6 +396,7 @@ public class ApiClient {
         requestBody.put("type", entry.getType());
         requestBody.put("value", entry.getValue());
         requestBody.put("is_active", true);
+        requestBody.put("server_id", sendServerId && !serverId.isEmpty() ? serverId : "undefined");
 
         String bodyJson = GSON.toJson(requestBody);
 
@@ -446,6 +447,9 @@ public class ApiClient {
         String encodedType = URLEncoder.encode(type, java.nio.charset.StandardCharsets.UTF_8);
         String encodedValue = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
         String url = String.format("/whitelist/entries/%s/%s", encodedType, encodedValue);
+        if (sendServerId && !serverId.isEmpty()) {
+            url += "?server_id=" + URLEncoder.encode(serverId, java.nio.charset.StandardCharsets.UTF_8);
+        }
 
         return sendRequest(url, "DELETE", null, false)
                 .thenApply(response -> {
