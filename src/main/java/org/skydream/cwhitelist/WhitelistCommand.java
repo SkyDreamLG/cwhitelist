@@ -85,7 +85,7 @@ public class WhitelistCommand {
     private static int addEntry(CommandSourceStack source, String type, String value) {
         // 校验 type 是否合法
         if (!Arrays.asList("name", "uuid", "ip").contains(type.toLowerCase())) {
-            source.sendFailure(Component.translatable(
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.error.invalid_type", type));
             return 0;
         }
@@ -96,7 +96,7 @@ public class WhitelistCommand {
 
         // 检查条目是否已存在
         if (WhitelistManager.containsEntry(entry)) {
-            source.sendFailure(Component.translatable(
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.error.entry_exists", type, value));
             return 2;
         }
@@ -104,20 +104,20 @@ public class WhitelistCommand {
         try {
             // 添加条目到白名单
             WhitelistManager.addEntry(entry);
-            source.sendSuccess(() -> Component.translatable(
+            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.success.entry_added", type, value), true);
 
             // 显示当前使用的源
             if (WhitelistManager.isUsingApi()) {
-                source.sendSuccess(() -> Component.translatable(
+                source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                         "cwhitelist.info.added_to_api"), false);
             } else {
-                source.sendSuccess(() -> Component.translatable(
+                source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                         "cwhitelist.info.added_to_local"), false);
             }
             return 1;
         } catch (Exception e) {
-            source.sendFailure(Component.translatable(
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.error.add_failed", e.getMessage()));
             return 3;
         }
@@ -126,19 +126,19 @@ public class WhitelistCommand {
     private static int removeEntry(CommandSourceStack source, String type, String value) {
         boolean removed = WhitelistManager.removeEntry(type, value);
         if (removed) {
-            source.sendSuccess(() -> Component.translatable(
+            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.success.entry_removed", type, value), true);
 
             // 显示当前使用的源
             if (WhitelistManager.isUsingApi()) {
-                source.sendSuccess(() -> Component.translatable(
+                source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                         "cwhitelist.info.removed_from_api"), false);
             } else {
-                source.sendSuccess(() -> Component.translatable(
+                source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                         "cwhitelist.info.removed_from_local"), false);
             }
         } else {
-            source.sendFailure(Component.translatable(
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.error.entry_not_found", type, value));
         }
         return removed ? 1 : 0;
@@ -151,7 +151,7 @@ public class WhitelistCommand {
             if (WhitelistManager.isUsingApi()) {
                 ApiClient.TokenInfo tokenInfo = ApiClient.getTokenInfo();
                 if (tokenInfo != null) {
-                    message = Component.translatable(
+                    message = Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.list.api_with_token",
                             tokenInfo.name,
                             tokenInfo.canRead ? "✓" : "✗",
@@ -160,19 +160,19 @@ public class WhitelistCommand {
                             WhitelistManager.getEntryCount()
                     );
                 } else {
-                    message = Component.translatable(
+                    message = Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.list.api_mode",
                             WhitelistManager.getEntryCount()
                     );
                 }
             } else {
-                message = Component.translatable(
+                message = Cwhitelist.translate(source.getPlayer(),
                         "cwhitelist.list.api_unavailable",
                         WhitelistManager.getEntryCount()
                 );
             }
         } else {
-            message = Component.translatable(
+            message = Cwhitelist.translate(source.getPlayer(),
                     "cwhitelist.list.local_mode",
                     WhitelistManager.getEntryCount()
             );
@@ -182,7 +182,7 @@ public class WhitelistCommand {
         if (WhitelistManager.getEntryCount() > 0) {
             MutableComponent entriesList = Component.literal("\n");
             WhitelistManager.getEntries().forEach(e ->
-                    entriesList.append(Component.translatable(
+                    entriesList.append(Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.list.entry_item",
                             e.getType(),
                             e.getValue()
@@ -191,7 +191,7 @@ public class WhitelistCommand {
             message = message.copy().append(entriesList);
         } else {
             message = message.copy().append("\n")
-                    .append(Component.translatable("cwhitelist.list.no_entries"));
+                    .append(Cwhitelist.translate(source.getPlayer(),"cwhitelist.list.no_entries"));
         }
 
         Component finalMessage = message;
@@ -200,7 +200,7 @@ public class WhitelistCommand {
     }
 
     private static int reload(CommandSourceStack source) {
-        source.sendSuccess(() -> Component.translatable("cwhitelist.reload.starting"), false);
+        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),"cwhitelist.reload.starting"), false);
 
         WhitelistManager.reload();
 
@@ -208,15 +208,15 @@ public class WhitelistCommand {
             try {
                 Thread.sleep(1000);
                 source.getServer().execute(() -> {
-                    source.sendSuccess(() -> Component.translatable(
+                    source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.reload.success"), false);
 
                     if (Config.ENABLE_API.get()) {
                         if (WhitelistManager.isUsingApi()) {
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.reload.source_api"), false);
                         } else {
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.reload.source_local"), false);
                         }
                     }
@@ -231,12 +231,12 @@ public class WhitelistCommand {
 
     private static int apiStatus(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.disabled"));
             return 0;
         }
 
         Config.API_TOKEN.get();
-        Component status = Component.translatable(
+        Component status = Cwhitelist.translate(source.getPlayer(),
                 "cwhitelist.api.status.title",
                 Config.API_BASE_URL.get(),
                 Config.ENABLE_API.get() ? "§aYes" : "§cNo",
@@ -247,7 +247,7 @@ public class WhitelistCommand {
 
         if (ApiClient.isEnabled()) {
             status = status.copy().append("\n")
-                    .append(Component.translatable("cwhitelist.api.status.token_status",
+                    .append(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.status.token_status",
                             ApiClient.getTokenStatus()));
         }
 
@@ -258,27 +258,27 @@ public class WhitelistCommand {
 
     private static int apiHealthCheck(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.translatable("cwhitelist.api.health.checking"), false);
+        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.health.checking"), false);
 
         CompletableFuture.runAsync(() -> {
             try {
                 boolean healthy = ApiClient.healthCheck().get(30, TimeUnit.SECONDS);
                 source.getServer().execute(() -> {
                     if (healthy) {
-                        source.sendSuccess(() -> Component.translatable(
+                        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                 "cwhitelist.api.health.success"), false);
                     } else {
-                        source.sendFailure(Component.translatable(
+                        source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                                 "cwhitelist.api.health.failed"));
                     }
                 });
             } catch (Exception e) {
                 source.getServer().execute(() -> {
-                    source.sendFailure(Component.translatable(
+                    source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.api.health.error",
                             e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
                 });
@@ -290,11 +290,11 @@ public class WhitelistCommand {
 
     private static int apiVerify(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.translatable("cwhitelist.api.verify.checking"), false);
+        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.verify.checking"), false);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -303,9 +303,9 @@ public class WhitelistCommand {
                     if (verified) {
                         ApiClient.TokenInfo tokenInfo = ApiClient.getTokenInfo();
                         if (tokenInfo != null) {
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.api.verify.success"), false);
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.api.verify.token_info",
                                     tokenInfo.name,
                                     tokenInfo.canRead ? "✓" : "✗",
@@ -313,13 +313,13 @@ public class WhitelistCommand {
                                     tokenInfo.canDelete ? "✓" : "✗"), false);
                         }
                     } else {
-                        source.sendFailure(Component.translatable(
+                        source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                                 "cwhitelist.api.verify.failed"));
                     }
                 });
             } catch (Exception e) {
                 source.getServer().execute(() -> {
-                    source.sendFailure(Component.translatable(
+                    source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.api.verify.error",
                             e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
                 });
@@ -331,11 +331,11 @@ public class WhitelistCommand {
 
     private static int apiSync(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.disabled"));
             return 0;
         }
 
-        source.sendSuccess(() -> Component.translatable("cwhitelist.api.sync.starting"), false);
+        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.sync.starting"), false);
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -348,30 +348,30 @@ public class WhitelistCommand {
                         // 强制重新加载白名单管理器以应用新的数据
                         WhitelistManager.reload();
 
-                        source.sendSuccess(() -> Component.translatable(
+                        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                 "cwhitelist.api.sync.success", entries.size()), false);
 
                         // 显示当前模式
                         if (WhitelistManager.isUsingApi()) {
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.reload.source_api"), false);
                         } else {
-                            source.sendSuccess(() -> Component.translatable(
+                            source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),
                                     "cwhitelist.reload.source_local"), false);
                         }
                     } else {
-                        source.sendFailure(Component.translatable(
+                        source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                                 "cwhitelist.api.sync.no_entries"));
                     }
                 });
             } catch (java.util.concurrent.TimeoutException e) {
                 source.getServer().execute(() -> {
-                    source.sendFailure(Component.translatable(
+                    source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.api.sync.timeout"));
                 });
             } catch (Exception e) {
                 source.getServer().execute(() -> {
-                    source.sendFailure(Component.translatable(
+                    source.sendFailure(Cwhitelist.translate(source.getPlayer(),
                             "cwhitelist.api.sync.error",
                             e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
                 });
@@ -383,12 +383,12 @@ public class WhitelistCommand {
 
     private static int clearCache(CommandSourceStack source) {
         if (!Config.ENABLE_API.get()) {
-            source.sendFailure(Component.translatable("cwhitelist.api.disabled"));
+            source.sendFailure(Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.disabled"));
             return 0;
         }
 
         ApiClient.clearCache();
-        source.sendSuccess(() -> Component.translatable("cwhitelist.api.cache.cleared"), true);
+        source.sendSuccess(() -> Cwhitelist.translate(source.getPlayer(),"cwhitelist.api.cache.cleared"), true);
         return 1;
     }
 
