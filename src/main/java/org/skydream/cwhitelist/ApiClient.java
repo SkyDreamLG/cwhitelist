@@ -1,6 +1,7 @@
 package org.skydream.cwhitelist;
 
 import com.google.gson.*;
+import io.netty.channel.local.LocalAddress;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -137,7 +138,7 @@ public class ApiClient {
         }
 
         public boolean isValidForWriting() {
-            return !isActive || !canWrite || isExpired();
+            return isActive && canWrite && !isExpired();
         }
 
         public boolean isValidForDeleting() {
@@ -228,7 +229,7 @@ public class ApiClient {
     }
 
     public static boolean hasValidToken() {
-        return !isTokenVerified.get() || tokenInfo == null;
+        return isTokenVerified.get() && tokenInfo != null;
     }
 
     public static CompletableFuture<Boolean> verifyToken() {
@@ -292,7 +293,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || !tokenInfo.isValidForReading()) {
+        if (!hasValidToken() || !tokenInfo.isValidForReading()) {
             LOGGER.error("Token does not have read permission or is invalid");
             return CompletableFuture.completedFuture(Collections.emptyList());
         }
@@ -386,7 +387,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || tokenInfo.isValidForWriting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
             LOGGER.error("Token does not have write permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -437,7 +438,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || !tokenInfo.isValidForDeleting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForDeleting()) {
             LOGGER.error("Token does not have delete permission or is invalid");
             return CompletableFuture.completedFuture(false);
         }
@@ -479,7 +480,7 @@ public class ApiClient {
         }
 
         // 检查Token权限
-        if (hasValidToken() || tokenInfo.isValidForWriting()) {
+        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
             LOGGER.warn("Token does not have write permission, skipping login event logging");
             return;
         }
@@ -509,8 +510,10 @@ public class ApiClient {
 
     private static String getPlayerIP(ServerPlayer player) {
         try {
-            return ((java.net.InetSocketAddress) player.connection.getConnection()
-                    .getRemoteAddress()).getAddress().getHostAddress();
+            var ra = player.connection.getConnection().getRemoteAddress();
+            if (ra instanceof java.net.InetSocketAddress isa) return isa.getAddress().getHostAddress();
+            else if (ra instanceof LocalAddress) return "<host>";
+            return "unknown";
         } catch (Exception e) {
             return "unknown";
         }
@@ -655,7 +658,7 @@ public class ApiClient {
             return "API disabled";
         }
 
-        if (hasValidToken()) {
+        if (!hasValidToken()) {
             return "Token not verified";
         }
 

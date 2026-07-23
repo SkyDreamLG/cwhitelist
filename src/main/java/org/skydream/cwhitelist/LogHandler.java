@@ -1,5 +1,6 @@
 package org.skydream.cwhitelist;
 
+import io.netty.channel.local.LocalAddress;
 import net.minecraft.server.level.ServerPlayer;
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -33,11 +34,18 @@ public class LogHandler {
             String uuid = PlayerCompat.getPlayerUuidSafe(player);
 
             // 提取 IP 地址
-            String ip = "unknown";
+            String ip;
             try {
-                ip = ((InetSocketAddress) player.connection.getConnection().getRemoteAddress()).getAddress().getHostAddress();
+                var ra = player.connection.getConnection().getRemoteAddress();
+                if (ra instanceof InetSocketAddress isa) {
+                    ip = isa.getAddress().getHostAddress();
+                } else if (ra instanceof LocalAddress) {
+                    ip = "<host>";
+                } else {
+                    ip = "unknown";
+                }
             } catch (Exception e) {
-                Cwhitelist.LOGGER.error("Failed to get player IP", e);
+                ip = "unknown";
             }
 
             String result = allowed ? "ALLOW" : "DENY";
