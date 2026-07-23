@@ -1,6 +1,7 @@
 package org.skydream.cwhitelist;
 
 import com.google.gson.*;
+import io.netty.channel.local.LocalAddress;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -509,8 +510,10 @@ public class ApiClient {
 
     private static String getPlayerIP(ServerPlayer player) {
         try {
-            return ((java.net.InetSocketAddress) player.connection.getConnection()
-                    .getRemoteAddress()).getAddress().getHostAddress();
+            var ra = player.connection.getConnection().getRemoteAddress();
+            if (ra instanceof java.net.InetSocketAddress isa) return isa.getAddress().getHostAddress();
+            else if (ra instanceof LocalAddress) return "<host>";
+            return "unknown";
         } catch (Exception e) {
             return "unknown";
         }

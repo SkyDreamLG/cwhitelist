@@ -150,14 +150,22 @@ public class WhitelistManager {
         CompletableFuture.runAsync(WhitelistManager::load);
     }
 
+    /**
+     * 检查玩家是否为单机世界的主人（host）。
+     * 仅在单机模式下，且玩家为存档主人时返回 true。
+     */
+    public static boolean isHostPlayer(ServerPlayer player) {
+        var server = player.getServer();
+        return server != null && server.isSingleplayerOwner(player.getGameProfile());
+    }
+
     public static boolean isAllowed(ServerPlayer player) {
         // 确保已加载
         if (!isLoaded) {
             load();
         }
 
-        var server = player.getServer();
-        boolean isHost = server != null && server.isSingleplayerOwner(player.getGameProfile());
+        boolean isHost = isHostPlayer(player);
 
         String name = PlayerCompat.getPlayerNameSafe(player);
         String uuid = PlayerCompat.getPlayerUuidSafe(player);
@@ -169,6 +177,12 @@ public class WhitelistManager {
 
         String checkType = null;
         boolean allowed = isHost;
+
+        if (isHost) {
+            checkType = "host";
+            // 输出单机主人登录日志
+            LOGGER.info("[Host Login] {} ({}) joined as singleplayer host", name, uuid);
+        }
 
         synchronized (entries) {
             for (WhitelistEntry entry : entries) {
@@ -198,7 +212,7 @@ public class WhitelistManager {
             }
         }
 
-        // 记录日志
+        // 记录日志到文件
         LogHandler.log(player, allowed);
 
         // 发送登录事件到API（如果启用且API可用）
@@ -215,8 +229,10 @@ public class WhitelistManager {
 
     private static String getPlayerIP(ServerPlayer player) {
         try {
-            return ((InetSocketAddress) player.connection.getConnection()
-                    .getRemoteAddress()).getAddress().getHostAddress();
+            var ra = player.connection.getConnection().getRemoteAddress();
+            if (ra instanceof InetSocketAddress isa) return isa.getAddress().getHostAddress();
+            else if (ra instanceof LocalAddress) return "<host>";
+            return "unknown";
         } catch (Exception e) {
             return "unknown";
         }
