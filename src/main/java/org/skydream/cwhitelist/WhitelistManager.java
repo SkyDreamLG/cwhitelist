@@ -2,6 +2,7 @@ package org.skydream.cwhitelist;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
+import io.netty.channel.local.LocalAddress;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -155,6 +156,9 @@ public class WhitelistManager {
             load();
         }
 
+        var server = player.getServer();
+        boolean isHost = server != null && server.isSingleplayerOwner(player.getGameProfile());
+
         String name = PlayerCompat.getPlayerNameSafe(player);
         String uuid = PlayerCompat.getPlayerUuidSafe(player);
         String ip = getPlayerIP(player);
@@ -164,10 +168,15 @@ public class WhitelistManager {
         boolean ENABLE_IP_CHECK = Config.ENABLE_IP_CHECK.get();
 
         String checkType = null;
-        boolean allowed = false;
+        boolean allowed = isHost;
 
         synchronized (entries) {
             for (WhitelistEntry entry : entries) {
+                // no need to perform checks if already allowed
+                if (allowed) {
+                    break;
+                }
+
                 if (ENABLE_NAME_CHECK && entry.type.equals("name") &&
                         entry.value.equalsIgnoreCase(name)) {
                     checkType = "name";
