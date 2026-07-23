@@ -161,6 +161,41 @@ public class Cwhitelist {
     }
 
     /**
+     * 在服务端根据玩家客户端语言完成翻译，返回 Component.literal。
+     * 客户端无需安装模组即可正确显示。
+     */
+    public static Component translate(ServerPlayer player, String key, Object... args) {
+        Map<String, String> langMap;
+        if (player != null) {
+            String langCode = player.clientInformation().language().toLowerCase();
+            langMap = translations.get(langCode);
+            if (langMap == null) {
+                String normalized = langCode.replace('-', '_');
+                langMap = translations.get(normalized);
+                if (langMap == null && normalized.contains("_")) {
+                    langMap = translations.get(normalized.split("_")[0]);
+                }
+            }
+        } else {
+            langMap = null;
+        }
+
+        if (langMap == null) {
+            langMap = translations.get(DEFAULT_LANGUAGE);
+        }
+
+        String text;
+        if (langMap != null) {
+            String template = langMap.getOrDefault(key, key);
+            text = args.length > 0 ? String.format(template, args) : template;
+        } else {
+            text = args.length > 0 ? String.format(key, args) : key;
+        }
+
+        return Component.literal(text);
+    }
+
+    /**
      * 根据玩家的客户端语言获取翻译后的踢出消息组件。
      * 在服务端完成翻译，发送 Component.literal 给客户端，
      * 确保客户端即使未安装本模组也能看到正确的翻译文本。
