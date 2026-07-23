@@ -206,4 +206,11 @@ public class Cwhitelist {
             }
         }
     }
+
+    @SubscribeEvent
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            ApiClient.logLogoutEvent(player);
+        }
+    }
 }
