@@ -342,8 +342,10 @@ public class ApiClient {
     }
 
     public static CompletableFuture<Boolean> healthCheck() {
-        // 健康检查不需要Token
-        return sendRequest("/health", "GET", null, true)
+        String url = "/health?server_id=" + URLEncoder.encode(
+            serverId != null && !serverId.isEmpty() ? serverId : "undefined",
+            java.nio.charset.StandardCharsets.UTF_8);
+        return sendRequest(url, "GET", null, true)
                 .thenApply(response -> {
                     try {
                         JsonObject json = JsonParser.parseString(response).getAsJsonObject();
