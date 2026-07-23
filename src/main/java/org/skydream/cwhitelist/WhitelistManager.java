@@ -2,6 +2,7 @@ package org.skydream.cwhitelist;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.*;
+import io.netty.channel.local.LocalAddress;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -149,11 +150,21 @@ public class WhitelistManager {
         CompletableFuture.runAsync(WhitelistManager::load);
     }
 
+    /**
+     * 检查玩家是否为单机世界的主人（host）。
+     * 仅在单机模式下，且玩家为存档主人时返回 true。
+     */
+    public static boolean isHostPlayer(ServerPlayer player) {
+        return player.connection.getConnection().getRemoteAddress() instanceof LocalAddress;
+    }
+
     public static boolean isAllowed(ServerPlayer player) {
         // 确保已加载
         if (!isLoaded) {
             load();
         }
+
+        boolean isHost = isHostPlayer(player);
 
         String name = PlayerCompat.getPlayerNameSafe(player);
         String uuid = PlayerCompat.getPlayerUuidSafe(player);
@@ -164,10 +175,21 @@ public class WhitelistManager {
         boolean ENABLE_IP_CHECK = Config.ENABLE_IP_CHECK.get();
 
         String checkType = null;
-        boolean allowed = false;
+        boolean allowed = isHost;
+
+        if (isHost) {
+            checkType = "host";
+            // 输出单机主人登录日志
+            LOGGER.info("[Host Login] {} ({}) joined as singleplayer host", name, uuid);
+        }
 
         synchronized (entries) {
             for (WhitelistEntry entry : entries) {
+                // no need to perform checks if already allowed
+                if (allowed) {
+                    break;
+                }
+
                 if (ENABLE_NAME_CHECK && entry.type.equals("name") &&
                         entry.value.equalsIgnoreCase(name)) {
                     checkType = "name";
@@ -189,7 +211,7 @@ public class WhitelistManager {
             }
         }
 
-        // 记录日志
+        // 记录日志到文件
         LogHandler.log(player, allowed);
 
         // 发送登录事件到API（如果启用且API可用）
@@ -206,8 +228,10 @@ public class WhitelistManager {
 
     private static String getPlayerIP(ServerPlayer player) {
         try {
-            return ((InetSocketAddress) player.connection.getConnection()
-                    .getRemoteAddress()).getAddress().getHostAddress();
+            var ra = player.connection.getConnection().getRemoteAddress();
+            if (ra instanceof InetSocketAddress isa) return isa.getAddress().getHostAddress();
+            else if (ra instanceof LocalAddress) return "<host>";
+            return "unknown";
         } catch (Exception e) {
             return "unknown";
         }
