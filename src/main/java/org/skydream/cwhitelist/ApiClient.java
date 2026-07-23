@@ -89,11 +89,36 @@ public class ApiClient {
             this.name = json.get("name").getAsString();
             this.isActive = json.get("is_active").getAsBoolean();
 
-            JsonObject permissions = json.getAsJsonObject("permissions");
-            this.canRead = permissions.get("can_read").getAsBoolean();
-            this.canWrite = permissions.get("can_write").getAsBoolean();
-            this.canDelete = permissions.get("can_delete").getAsBoolean();
-            this.canManage = permissions.get("can_manage").getAsBoolean();
+            JsonElement permissionsElement = json.get("permissions");
+            if (permissionsElement != null && permissionsElement.isJsonArray()) {
+                // V2 format: ["whitelist:read", "whitelist:write", ...]
+                boolean r = false, w = false, d = false, m = false;
+                for (JsonElement e : permissionsElement.getAsJsonArray()) {
+                    String perm = e.getAsString();
+                    switch (perm) {
+                        case "whitelist:read" -> r = true;
+                        case "whitelist:write" -> w = true;
+                        case "whitelist:delete" -> d = true;
+                        case "whitelist:manage" -> m = true;
+                    }
+                }
+                this.canRead = r;
+                this.canWrite = w;
+                this.canDelete = d;
+                this.canManage = m;
+            } else if (permissionsElement != null && permissionsElement.isJsonObject()) {
+                // V1 format: {"can_read": true, "can_write": true, ...}
+                JsonObject permObj = permissionsElement.getAsJsonObject();
+                this.canRead = permObj.get("can_read").getAsBoolean();
+                this.canWrite = permObj.get("can_write").getAsBoolean();
+                this.canDelete = permObj.get("can_delete").getAsBoolean();
+                this.canManage = permObj.has("can_manage") ? permObj.get("can_manage").getAsBoolean() : false;
+            } else {
+                this.canRead = false;
+                this.canWrite = false;
+                this.canDelete = false;
+                this.canManage = false;
+            }
 
             JsonElement expiresElement = json.get("expires_at");
             if (expiresElement != null && !expiresElement.isJsonNull()) {
