@@ -29,7 +29,9 @@
 - **Centralized Management**: Single source of truth across multiple servers
 - **Real-time Synchronization**: Automatic whitelist updates
 - **Token-based Authentication**: Secure API communication with permission levels
-- **Health Monitoring**: Built-in API health checks
+- **Health Monitoring**: Built-in API health checks with automatic heartbeat
+- **Player Tracking**: Login/logout event reporting for online status monitoring
+- **Adaptive Heartbeat**: 30s normal interval, 5s fast retry on failure, auto-recovery
 
 ### 📊 Intelligent Logging System
 - **Comprehensive Audit Trail**: Player login attempts with timestamps
@@ -116,9 +118,8 @@ Backend program repository address：[cwhitelist-backend](https://github.com/Sky
 | `timeoutSeconds` | `10` | API request timeout |
 | `cacheDurationSeconds` | `30` | Local cache duration (0 to disable) |
 | `syncOnStartup` | `true` | Sync with API on server start |
-| `logLoginEvents` | `true` | Send login events to API |
-| `serverId` | `""` | Optional server identifier |
-| `sendServerId` | `false` | Include server ID in API requests |
+| `logLoginEvents` | `true` | Send login/logout events to API |
+| `serverId` | `""` | Server identifier (recommended to set) |
 | `includeExpired` | `false` | Include expired entries when syncing |
 
 ## 📋 Command Reference
@@ -172,12 +173,15 @@ Backend program repository address：[cwhitelist-backend](https://github.com/Sky
 ### API Requirements
 CWhitelist supports integration with compatible API servers that implement the following endpoints:
 
-- `GET /health` - Health check (no authentication required)
-- `GET /whitelist/sync` - Retrieve whitelist entries (requires read permission)
-- `POST /whitelist/entries` - Add new entries (requires write permission)
-- `DELETE /whitelist/entries/{type}/{value}` - Remove entries (requires delete permission)
-- `POST /login/log` - Log login events (requires write permission)
+- `GET /health` - Health check / heartbeat (no authentication, `?server_id=` required)
+- `GET /whitelist/sync` - Retrieve whitelist entries (requires read permission, `&server_id=` required)
+- `POST /whitelist/entries` - Add new entries (requires write permission, `server_id` in body)
+- `DELETE /whitelist/entries/{type}/{value}` - Remove entries (requires delete permission, `?server_id=` required)
+- `POST /login/log` - Log login events (requires write permission, `server_id` in body)
+- `POST /login/logout` - Log logout events (requires write permission, `server_id` in body)
 - `GET /tokens/verify` - Verify token validity (requires authentication)
+
+> **Note:** `server_id` is always sent with every API request. If not configured, `"undefined"` is used as fallback.
 
 ### Token Permissions
 API tokens must be created with appropriate permissions:
@@ -284,11 +288,23 @@ cacheDurationSeconds = 30  // Balance between freshness and API load
 
 ### Common Issues
 
+**Server ID Not Set:**
+```
+[Server] WARN ⚠ [CWhitelist] server_id 未设置！
+```
+**Solution:** Set `serverId` in `cwhitelist-common.toml`. Without it, `"undefined"` is used as fallback.
+
 **API Connection Failed:**
 ```
 [Server] WARN API health check failed, falling back to local file
 ```
 **Solution:** Verify API server is running and accessible. Check network connectivity and firewall settings.
+
+**Heartbeat Failure:**
+```
+[Server] WARN ⚠ Heartbeat failed, switching to fast interval (5s)
+```
+**Solution:** Check API server stability. Heartbeat auto-recovers with `✅ Heartbeat recovered` when connection restores.
 
 **Authentication Failed:**
 ```
@@ -332,9 +348,9 @@ Check log files for detailed error information:
 ## 🧩 API Compatibility
 
 ### Supported API Versions
-- **Minimum**: v1.0.0
-- **Recommended**: v1.1.0+
-- **Tested With**: CWhitelist API v1.2.0
+- **Minimum**: v2.0.0
+- **Recommended**: v2.0.0
+- **Tested With**: CWhitelist API v2.0.0
 
 ### Response Format Expectations
 ```json

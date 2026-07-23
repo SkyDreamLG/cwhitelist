@@ -15,6 +15,9 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ApiClient {
@@ -41,6 +44,13 @@ public class ApiClient {
     // 请求队列
     private static final Queue<Runnable> requestQueue = new ArrayDeque<>();
     private static boolean isProcessingQueue = false;
+
+    // 心跳
+    private static final int HEARTBEAT_NORMAL_SECONDS = 30;
+    private static final int HEARTBEAT_FAST_SECONDS = 5;
+    private static ScheduledExecutorService heartbeatExecutor;
+    private static final AtomicBoolean heartbeatRunning = new AtomicBoolean(false);
+    private static volatile boolean heartbeatHealthy = true;
 
     // 强制刷新标记
     private static final boolean forceRefresh = false;
@@ -229,6 +239,69 @@ public class ApiClient {
             LOGGER.error("❌ API health check ERROR: {}", e.getMessage());
             return null;
         });
+
+        startHeartbeat();
+    }
+
+    private static void startHeartbeat() {
+        if (!heartbeatRunning.compareAndSet(false, true)) {
+            return;
+        }
+
+        heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "CWhitelist-Heartbeat");
+            t.setDaemon(true);
+            return t;
+        });
+
+        LOGGER.info("Heartbeat started (interval: {}s)", HEARTBEAT_NORMAL_SECONDS);
+        scheduleHeartbeat(HEARTBEAT_NORMAL_SECONDS);
+    }
+
+    private static void scheduleHeartbeat(int delaySeconds) {
+        if (!heartbeatRunning.get()) {
+            return;
+        }
+
+        heartbeatExecutor.schedule(() -> {
+            if (!isEnabled()) {
+                LOGGER.info("API disabled, heartbeat stops");
+                heartbeatRunning.set(false);
+                return;
+            }
+
+            healthCheck().thenAccept(healthy -> {
+                if (!heartbeatRunning.get() || !isEnabled()) {
+                    return;
+                }
+
+                if (healthy) {
+                    if (!heartbeatHealthy) {
+                        heartbeatHealthy = true;
+                        LOGGER.info("✅ Heartbeat recovered, restoring normal interval ({}s)",
+                                HEARTBEAT_NORMAL_SECONDS);
+                    }
+                    scheduleHeartbeat(HEARTBEAT_NORMAL_SECONDS);
+                } else {
+                    if (heartbeatHealthy) {
+                        heartbeatHealthy = false;
+                        LOGGER.warn("⚠ Heartbeat failed, switching to fast interval ({}s)",
+                                HEARTBEAT_FAST_SECONDS);
+                    }
+                    scheduleHeartbeat(HEARTBEAT_FAST_SECONDS);
+                }
+            }).exceptionally(e -> {
+                if (heartbeatRunning.get() && isEnabled()) {
+                    if (heartbeatHealthy) {
+                        heartbeatHealthy = false;
+                        LOGGER.warn("⚠ Heartbeat error: {}, switching to fast interval ({}s)",
+                                e.getMessage(), HEARTBEAT_FAST_SECONDS);
+                    }
+                    scheduleHeartbeat(HEARTBEAT_FAST_SECONDS);
+                }
+                return null;
+            });
+        }, delaySeconds, TimeUnit.SECONDS);
     }
 
     public static boolean isEnabled() {
@@ -269,8 +342,10 @@ public class ApiClient {
     }
 
     public static CompletableFuture<Boolean> healthCheck() {
-        // 健康检查不需要Token
-        return sendRequest("/health", "GET", null, true)
+        String url = "/health?server_id=" + URLEncoder.encode(
+            serverId != null && !serverId.isEmpty() ? serverId : "undefined",
+            java.nio.charset.StandardCharsets.UTF_8);
+        return sendRequest(url, "GET", null, true)
                 .thenApply(response -> {
                     try {
                         JsonObject json = JsonParser.parseString(response).getAsJsonObject();
