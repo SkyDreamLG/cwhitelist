@@ -493,6 +493,7 @@ public class ApiClient {
                 requestBody.put("player_ip", getPlayerIP(player));
                 requestBody.put("allowed", allowed);
                 requestBody.put("check_type", checkType != null ? checkType : "none");
+                requestBody.put("server_id", sendServerId && !serverId.isEmpty() ? serverId : "undefined");
 
                 String bodyJson = GSON.toJson(requestBody);
 
