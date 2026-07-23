@@ -348,9 +348,9 @@ cacheDurationSeconds = 30  // 在新鲜度和 API 负载之间平衡
 ## 🧩 API 兼容性
 
 ### 支持的 API 版本
-- **最低**：v2.0.0
-- **推荐**：v2.0.0
-- **测试版本**：CWhitelist API v2.0.0
+- **最低**：v2.1.0
+- **推荐**：v2.1.0
+- **测试版本**：CWhitelist API v2.1.0
 
 ### 响应格式期望
 ```json

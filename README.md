@@ -348,9 +348,9 @@ Check log files for detailed error information:
 ## 🧩 API Compatibility
 
 ### Supported API Versions
-- **Minimum**: v2.0.0
-- **Recommended**: v2.0.0
-- **Tested With**: CWhitelist API v2.0.0
+- **Minimum**: v2.1.0
+- **Recommended**: v2.1.0
+- **Tested With**: CWhitelist API v2.1.0
 
 ### Response Format Expectations
 ```json
