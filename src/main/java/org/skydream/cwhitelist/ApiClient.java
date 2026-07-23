@@ -26,7 +26,6 @@ public class ApiClient {
     private static String apiToken;
     private static boolean useHeaderAuth = true;
     private static String serverId = "";
-    private static boolean sendServerId = false;
     private static boolean includeExpired = false;
     private static int timeoutSeconds;
 
@@ -172,7 +171,6 @@ public class ApiClient {
         timeoutSeconds = Config.API_TIMEOUT_SECONDS.get();
         cacheDurationSeconds = Config.API_CACHE_DURATION_SECONDS.get();
         serverId = Config.SERVER_ID.get();
-        sendServerId = Config.API_SEND_SERVER_ID.get();
         includeExpired = Config.API_INCLUDE_EXPIRED.get();
 
         LOGGER.info("API Configuration:");
@@ -182,6 +180,15 @@ public class ApiClient {
         LOGGER.info("  Cache Duration: {} seconds", cacheDurationSeconds);
         LOGGER.info("  Token configured: {}",
                 apiToken != null && !apiToken.trim().isEmpty() ? "YES" : "NO");
+
+        if (serverId == null || serverId.trim().isEmpty()) {
+            LOGGER.warn("==============================================");
+            LOGGER.warn("⚠ [CWhitelist] server_id 未设置！");
+            LOGGER.warn("  请在 cwhitelist-common.toml 中配置 serverId");
+            LOGGER.warn("  示例: serverId = \"my-server-01\"");
+            LOGGER.warn("  未设置 server_id 将使用 \"undefined\" 作为默认值");
+            LOGGER.warn("==============================================");
+        }
 
         if (apiToken == null || apiToken.trim().isEmpty()) {
             LOGGER.error("API token is not set. Please configure token in cwhitelist-common.toml");
@@ -317,9 +324,9 @@ public class ApiClient {
             LOGGER.debug("Forcing refresh from API (bypassing cache)");
         }
 
-        if (sendServerId && !serverId.isEmpty()) {
-            urlBuilder.append("&server_id=").append(URLEncoder.encode(serverId, java.nio.charset.StandardCharsets.UTF_8));
-        }
+        urlBuilder.append("&server_id=").append(URLEncoder.encode(
+            serverId != null && !serverId.isEmpty() ? serverId : "undefined",
+            java.nio.charset.StandardCharsets.UTF_8));
 
         if (includeExpired) {
             urlBuilder.append("&include_expired=true");
@@ -396,7 +403,7 @@ public class ApiClient {
         requestBody.put("type", entry.getType());
         requestBody.put("value", entry.getValue());
         requestBody.put("is_active", true);
-        requestBody.put("server_id", sendServerId && !serverId.isEmpty() ? serverId : "undefined");
+        requestBody.put("server_id", serverId != null && !serverId.isEmpty() ? serverId : "undefined");
 
         String bodyJson = GSON.toJson(requestBody);
 
@@ -447,9 +454,9 @@ public class ApiClient {
         String encodedType = URLEncoder.encode(type, java.nio.charset.StandardCharsets.UTF_8);
         String encodedValue = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
         String url = String.format("/whitelist/entries/%s/%s", encodedType, encodedValue);
-        if (sendServerId && !serverId.isEmpty()) {
-            url += "?server_id=" + URLEncoder.encode(serverId, java.nio.charset.StandardCharsets.UTF_8);
-        }
+        url += "?server_id=" + URLEncoder.encode(
+            serverId != null && !serverId.isEmpty() ? serverId : "undefined",
+            java.nio.charset.StandardCharsets.UTF_8);
 
         return sendRequest(url, "DELETE", null, false)
                 .thenApply(response -> {
@@ -497,7 +504,7 @@ public class ApiClient {
                 requestBody.put("player_ip", getPlayerIP(player));
                 requestBody.put("allowed", allowed);
                 requestBody.put("check_type", checkType != null ? checkType : "none");
-                requestBody.put("server_id", sendServerId && !serverId.isEmpty() ? serverId : "undefined");
+                requestBody.put("server_id", serverId != null && !serverId.isEmpty() ? serverId : "undefined");
 
                 String bodyJson = GSON.toJson(requestBody);
 
@@ -509,6 +516,36 @@ public class ApiClient {
                         });
             } catch (Exception e) {
                 LOGGER.error("Error preparing login log request", e);
+            }
+        });
+    }
+
+    public static void logLogoutEvent(ServerPlayer player) {
+        if (!isEnabled() || !Config.API_LOG_LOGIN_EVENTS.get()) {
+            return;
+        }
+
+        if (!hasValidToken() || !tokenInfo.isValidForWriting()) {
+            return;
+        }
+
+        queueRequest(() -> {
+            try {
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("player_name", PlayerCompat.getPlayerNameSafe(player));
+                requestBody.put("player_uuid", PlayerCompat.getPlayerUuidSafe(player));
+                requestBody.put("player_ip", getPlayerIP(player));
+                requestBody.put("server_id", serverId != null && !serverId.isEmpty() ? serverId : "undefined");
+
+                String bodyJson = GSON.toJson(requestBody);
+
+                sendRequest("/login/logout", "POST", bodyJson, false)
+                        .exceptionally(e -> {
+                            LOGGER.warn("Failed to log logout event to API", e);
+                            return null;
+                        });
+            } catch (Exception e) {
+                LOGGER.error("Error preparing logout log request", e);
             }
         });
     }

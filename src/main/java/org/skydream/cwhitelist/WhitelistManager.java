@@ -212,15 +212,17 @@ public class WhitelistManager {
             }
         }
 
-        // 记录日志到文件
-        LogHandler.log(player, allowed);
+        // 仅当白名单已加载完成时才记录日志，避免模组初始化阶段的空白条目
+        if (isLoaded) {
+            LogHandler.log(player, allowed);
 
-        // 发送登录事件到API（如果启用且API可用）
-        if (Config.API_LOG_LOGIN_EVENTS.get() && apiAvailable) {
-            if (allowed && checkType != null) {
-                ApiClient.logLoginEvent(player, true, checkType);
-            } else if (!allowed) {
-                ApiClient.logLoginEvent(player, false, "none");
+            // 发送登录事件到API（如果启用且API可用）
+            if (Config.API_LOG_LOGIN_EVENTS.get() && apiAvailable) {
+                if (allowed && checkType != null) {
+                    ApiClient.logLoginEvent(player, true, checkType);
+                } else if (!allowed) {
+                    ApiClient.logLoginEvent(player, false, "none");
+                }
             }
         }
 

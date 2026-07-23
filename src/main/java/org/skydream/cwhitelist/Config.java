@@ -26,7 +26,6 @@ public class Config {
     public static final ModConfigSpec.BooleanValue API_SYNC_ON_STARTUP;
     public static final ModConfigSpec.BooleanValue API_LOG_LOGIN_EVENTS;
     public static final ModConfigSpec.ConfigValue<String> SERVER_ID;
-    public static final ModConfigSpec.BooleanValue API_SEND_SERVER_ID;
     public static final ModConfigSpec.BooleanValue API_INCLUDE_EXPIRED;
 
     static {
@@ -87,9 +86,6 @@ public class Config {
         SERVER_ID = builder
                 .comment("Server identifier (optional)")
                 .define("serverId", "");
-        API_SEND_SERVER_ID = builder
-                .comment("Send server ID in requests")
-                .define("sendServerId", false);
         API_INCLUDE_EXPIRED = builder
                 .comment("Include expired entries when syncing")
                 .define("includeExpired", false);
