@@ -252,6 +252,11 @@ public class WhitelistCommand {
             return true;
         }
 
+        // 检查原生 Minecraft OP 权限等级（GAMEMASTER 及以上，即 level >= 2）
+        if (source.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER)) {
+            return true;
+        }
+
         // 检查具体权限
         return PermissionAPI.getPermission(player, permission);
     }
